@@ -12,11 +12,19 @@ import (
 )
 
 func Execute() {
-	//Todo config: select logger type based
-	config := config.Load()
-	log.Println(*config)
+	cfg := config.Load()
+	log.Println("config:", *cfg)
 
-	logger, err := zap.NewDevelopment()
+	var (
+		logger *zap.Logger
+		err error
+	)
+
+	if cfg.Debug {
+		logger, err = zap.NewDevelopment()
+	} else {
+		logger, err = zap.NewProduction()
+	}
 
 	if err != nil {
 		log.Fatal(err)
@@ -27,8 +35,8 @@ func Execute() {
 		Short: "http monitoring service - summer 2022",
 	}
 
-	root.AddCommand(serve.New(logger))
-	root.AddCommand(monitor.New(logger))
+	root.AddCommand(serve.New(cfg, logger))
+	root.AddCommand(monitor.New(cfg, logger))
 
 	if err := root.Execute(); err != nil {
 		logger.Error("failed to execute root command", zap.Error(err))

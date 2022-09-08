@@ -1,12 +1,13 @@
 package serve
 
 import (
+	"github.com/MeysamBavi/http-monitoring/internal/config"
 	"github.com/labstack/echo/v4"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
 
-func main(logger *zap.Logger) {
+func main(cfg *config.Config, logger *zap.Logger) {
 	//Todo
 
 	app := echo.New()
@@ -14,17 +15,18 @@ func main(logger *zap.Logger) {
 		return c.String(200, "Hello, World!")
 	})
 
-	app.Start(":1234")
+	app.Debug = cfg.Debug
+
+	app.Start(cfg.Listen)
 }
 
 
-// Todo Config: add config param to main and new
-func New(logger *zap.Logger) *cobra.Command {
+func New(cfg *config.Config, logger *zap.Logger) *cobra.Command {
 	return &cobra.Command{
 		Use: "serve",
 		Short: "Runs the http server",
 		Run: func(cmd *cobra.Command, args []string) {
-			main(logger);
+			main(cfg, logger);
 		},
 	}
 }
