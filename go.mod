@@ -1,15 +1,20 @@
 module github.com/MeysamBavi/http-monitoring
 
 require (
+	github.com/knadh/koanf v1.4.3
 	github.com/labstack/echo/v4 v4.9.0
+	github.com/spf13/cobra v1.5.0
 	go.uber.org/zap v1.23.0
 )
 
 require (
+	github.com/fatih/structs v1.1.0 // indirect
+	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0 // indirect
-	github.com/inconshreveable/mousetrap v1.0.0 // indirect
-	github.com/knadh/koanf v1.4.3 // indirect
-	github.com/spf13/cobra v1.5.0 // indirect
+	github.com/inconshreveable/mousetrap v1.0.1 // indirect
+	github.com/mitchellh/copystructure v1.2.0 // indirect
+	github.com/mitchellh/mapstructure v1.5.0 // indirect
+	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	go.mongodb.org/mongo-driver v1.10.1 // indirect
 	go.uber.org/atomic v1.10.0 // indirect

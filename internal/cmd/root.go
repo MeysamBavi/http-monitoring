@@ -6,12 +6,16 @@ import (
 
 	"github.com/MeysamBavi/http-monitoring/internal/cmd/monitor"
 	"github.com/MeysamBavi/http-monitoring/internal/cmd/serve"
+	"github.com/MeysamBavi/http-monitoring/internal/config"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
 
 func Execute() {
 	//Todo config: select logger type based
+	config := config.Load()
+	log.Println(*config)
+
 	logger, err := zap.NewDevelopment()
 
 	if err != nil {
