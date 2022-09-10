@@ -4,7 +4,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/MeysamBavi/http-monitoring/internal/config"
 	"github.com/MeysamBavi/http-monitoring/internal/monitoring"
@@ -17,8 +16,8 @@ func main(cfg *config.Config, logger *zap.Logger) {
 
 	scheduler := monitoring.NewScheduler(
 		logger.Named("scheduler"),
-		10,
-		time.Second*2,
+		cfg.Monitoring.NumberOfWorkers,
+		cfg.Monitoring.RequestTimeout,
 	)
 
 	shutdown := make(chan os.Signal, 1)
