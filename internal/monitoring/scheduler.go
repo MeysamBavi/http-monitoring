@@ -25,51 +25,75 @@ func NewScheduler(logger *zap.Logger, numOfWorkers int, requestTimeout time.Dura
 }
 
 func (s *Scheduler) Run(shutdown <-chan os.Signal) {
-	// schedule writes on "in"
+
+	scope := s.createScope(shutdown)
+	s.startWorkers(scope)
+	s.startModules(scope)
+	s.waitForShutdown(scope)
+}
+
+// needed variables in run
+type scope struct {
+	// 'schedule' writes on "in"
 	// workers read from "in"
 	// workers write on "out"
-	// collect reads from "out"
+	// 'collect' reads from "out"
 
-	in := make(chan *Task, s.numOfWorkers)
-	out := make(chan *Result, s.numOfWorkers)
-	var wg sync.WaitGroup
+	shutdown         <-chan os.Signal
+	in               chan *Task
+	out              chan *Result
+	wg               sync.WaitGroup
+	scheduleShutdown chan int
+	updateShutdown   chan int
+	updateDone       chan int
+	collectDone      chan int
+	syncHeap         *util.SyncHeap[*TimedURL]
+}
 
-	wg.Add(s.numOfWorkers)
-	workers := make([]*Worker, s.numOfWorkers)
-
-	for i := 0; i < s.numOfWorkers; i++ {
-		workers[i] = NewWorker(s.requestTimeout, s.logger.Named(fmt.Sprintf("worker(%d)", i)))
-		go workers[i].Work(&wg, in, out)
+func (s *Scheduler) createScope(shutdown <-chan os.Signal) *scope {
+	return &scope{
+		shutdown:         shutdown,
+		in:               make(chan *Task, s.numOfWorkers),
+		out:              make(chan *Result, s.numOfWorkers),
+		scheduleShutdown: make(chan int),
+		updateShutdown:   make(chan int),
+		updateDone:       make(chan int),
+		collectDone:      make(chan int),
+		syncHeap:         nil,
 	}
+}
 
-	heap := s.initializeHeap()
-	scheduleShutdown := make(chan int)
-	go s.schedule(heap, in, scheduleShutdown)
+func (s *Scheduler) startWorkers(scope *scope) {
+	scope.wg.Add(s.numOfWorkers)
+	for i := 0; i < s.numOfWorkers; i++ {
+		go NewWorker(s.requestTimeout, s.logger.Named(fmt.Sprintf("worker(%d)", i))).Work(&scope.wg, scope.in, scope.out)
+	}
+}
 
-	updateShutdown := make(chan int)
-	updateDone := make(chan int)
-	go s.update(heap, updateShutdown, updateDone)
+func (s *Scheduler) startModules(scope *scope) {
+	scope.syncHeap = s.initializeHeap()
+	go s.schedule(scope.syncHeap, scope.in, scope.scheduleShutdown)
+	go s.update(scope.syncHeap, scope.updateShutdown, scope.updateDone)
+	go s.collect(scope.out, scope.collectDone)
+}
 
-	collectDone := make(chan int)
-	go s.collect(out, collectDone)
-
-	// wait for shutdown signal
-	<-shutdown
+func (s *Scheduler) waitForShutdown(scope *scope) {
+	<-scope.shutdown
 	s.logger.Info("received shutdown signal")
 
 	s.logger.Info("stopping update")
-	updateShutdown <- 0
-	<-updateDone
+	scope.updateShutdown <- 0
+	<-scope.updateDone
 
 	s.logger.Info("stopping schedule")
-	scheduleShutdown <- 0 // close "in"
+	scope.scheduleShutdown <- 0 // close "in"
 
 	s.logger.Info("waiting for workers to finish")
-	wg.Wait() // wait for workers to stop writing to "out"
+	scope.wg.Wait() // wait for workers to stop writing to "out"
 
-	close(out) // close "out"
+	close(scope.out) // close "out"
 	s.logger.Info("waiting for collect to finish writing to db")
-	<-collectDone // wait for collect to complete working
+	<-scope.collectDone // wait for collect to complete working
 }
 
 func (s *Scheduler) initializeHeap() *util.SyncHeap[*TimedURL] {
@@ -110,19 +134,6 @@ func (s *Scheduler) schedule(syncedHeap *util.SyncHeap[*TimedURL], in chan<- *Ta
 	}
 }
 
-// reads from "out" and writes to database. sends signal on "done" when done
-func (s *Scheduler) collect(out <-chan *Result, done chan<- int) {
-	logger := s.logger.Named("collect")
-
-	for r := range out {
-		logger.Debug("saving this result to db", zap.Any("result", r))
-
-		//Todo: save to database
-	}
-
-	done <- 0
-}
-
 // reads from db and updates heap
 func (s *Scheduler) update(syncHeap *util.SyncHeap[*TimedURL], shutdown <-chan int, done chan<- int) {
 	// Todo: listen for updates from database
@@ -143,4 +154,17 @@ func (s *Scheduler) update(syncHeap *util.SyncHeap[*TimedURL], shutdown <-chan i
 			i++
 		}
 	}
+}
+
+// reads from "out" and writes to database. sends signal on "done" when done
+func (s *Scheduler) collect(out <-chan *Result, done chan<- int) {
+	logger := s.logger.Named("collect")
+
+	for r := range out {
+		logger.Debug("saving this result to db", zap.Any("result", r))
+
+		//Todo: save to database
+	}
+
+	done <- 0
 }
