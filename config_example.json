@@ -1,0 +1,8 @@
+{
+  "debug": false,
+  "listen": "4321",
+  "monitoring": {
+    "number_of_workers": 11,
+    "request_timeout": "11s"
+  }
+}
