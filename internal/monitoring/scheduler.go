@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/MeysamBavi/http-monitoring/internal/util"
 	"go.uber.org/zap"
 )
 
@@ -41,9 +42,13 @@ func (s *Scheduler) Run(shutdown <-chan os.Signal) {
 		go workers[i].Work(&wg, in, out)
 	}
 
-	heap := s.initialize()
+	heap := s.initializeHeap()
 	scheduleShutdown := make(chan int)
 	go s.schedule(heap, in, scheduleShutdown)
+
+	updateShutdown := make(chan int)
+	updateDone := make(chan int)
+	go s.update(heap, updateShutdown, updateDone)
 
 	collectDone := make(chan int)
 	go s.collect(out, collectDone)
@@ -52,9 +57,14 @@ func (s *Scheduler) Run(shutdown <-chan os.Signal) {
 	<-shutdown
 	s.logger.Info("received shutdown signal")
 
+	s.logger.Info("stopping update")
+	updateShutdown <- 0
+	<-updateDone
+
+	s.logger.Info("stopping schedule")
 	scheduleShutdown <- 0 // close "in"
 
-	s.logger.Info("waiting for workers to finish their jobs")
+	s.logger.Info("waiting for workers to finish")
 	wg.Wait() // wait for workers to stop writing to "out"
 
 	close(out) // close "out"
@@ -62,20 +72,14 @@ func (s *Scheduler) Run(shutdown <-chan os.Signal) {
 	<-collectDone // wait for collect to complete working
 }
 
-func (s *Scheduler) initialize() *Heap {
+func (s *Scheduler) initializeHeap() *util.SyncHeap[*TimedURL] {
 	//Todo: initialize heap from database
 
-	//Todo: remove this
-	l := []*TimedURL{
-		NewTimeURL("https://httpbin.org/status/200", 1, 5*time.Second),
-		NewTimeURL("https://httpbin.org/status/500", 1, 20*time.Second),
-	}
-
-	return NewHeap(l...)
+	return util.NewSyncHeap[*TimedURL](NewHeap())
 }
 
 // writes to "in" and closes it when shutdown signal is received
-func (s *Scheduler) schedule(syncedHeap *Heap, in chan<- *Task, shutdown <-chan int) {
+func (s *Scheduler) schedule(syncedHeap *util.SyncHeap[*TimedURL], in chan<- *Task, shutdown <-chan int) {
 	logger := s.logger.Named("schedule")
 
 	for {
@@ -85,6 +89,10 @@ func (s *Scheduler) schedule(syncedHeap *Heap, in chan<- *Task, shutdown <-chan 
 			return
 
 		default:
+			if syncedHeap.Len() == 0 {
+				time.Sleep(time.Millisecond * 100)
+				continue
+			}
 			earliestUrl := syncedHeap.Peek()
 			if time.Now().Before(earliestUrl.callTime) {
 				time.Sleep(time.Until(earliestUrl.callTime))
@@ -113,4 +121,26 @@ func (s *Scheduler) collect(out <-chan *Result, done chan<- int) {
 	}
 
 	done <- 0
+}
+
+// reads from db and updates heap
+func (s *Scheduler) update(syncHeap *util.SyncHeap[*TimedURL], shutdown <-chan int, done chan<- int) {
+	// Todo: listen for updates from database
+
+	logger := s.logger.Named("update")
+	i := uint32(0)
+
+	for {
+		select {
+		case <-shutdown:
+			done <- 0
+			return
+		default:
+			//Todo: remove this
+			time.Sleep(10 * time.Second)
+			logger.Debug("updating heap")
+			syncHeap.Push(NewTimedURL("https://httpbin.org/status/206", i, 10*time.Second))
+			i++
+		}
+	}
 }
