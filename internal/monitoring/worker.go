@@ -6,18 +6,19 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"go.uber.org/zap"
 )
 
 type Worker struct {
-	ctx context.Context
-	logger *zap.Logger
+	timeout time.Duration
+	logger  *zap.Logger
 }
 
-func NewWorker(ctx context.Context, logger *zap.Logger) *Worker {
+func NewWorker(requestTimeout time.Duration, logger *zap.Logger) *Worker {
 	return &Worker{
-		ctx, logger,
+		requestTimeout, logger,
 	}
 }
 
@@ -34,7 +35,10 @@ func (w *Worker) Work(wg *sync.WaitGroup, in <-chan *Task, out chan<- *Result) {
 func (w *Worker) Process(t *Task) (*Result, bool) {
 
 	// creating http request
-	req, errReq := http.NewRequestWithContext(w.ctx, http.MethodGet, t.URL, nil)
+	ctx, cancel := context.WithTimeout(context.Background(), w.timeout)
+	defer cancel()
+
+	req, errReq := http.NewRequestWithContext(ctx, http.MethodGet, t.URL, nil)
 
 	if errReq != nil {
 		w.logger.Error("error creating the request", zap.Error(errReq))
@@ -64,8 +68,8 @@ func (w *Worker) Process(t *Task) (*Result, bool) {
 	}
 
 	return &Result{
-		Task: t,
+		Task:       t,
 		StatusCode: res.StatusCode,
-		Body: responseBody,
+		Body:       responseBody,
 	}, true
 }
