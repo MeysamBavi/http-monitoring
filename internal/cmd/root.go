@@ -17,7 +17,7 @@ func Execute() {
 
 	var (
 		logger *zap.Logger
-		err error
+		err    error
 	)
 
 	if cfg.Debug {
@@ -31,7 +31,7 @@ func Execute() {
 	}
 
 	root := cobra.Command{
-		Use: "httpm",
+		Use:   "httpm",
 		Short: "http monitoring service - summer 2022",
 	}
 
