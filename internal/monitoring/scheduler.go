@@ -139,7 +139,7 @@ func (s *Scheduler) update(syncHeap *util.SyncHeap[*TimedURL], shutdown <-chan i
 	// Todo: listen for updates from database
 
 	logger := s.logger.Named("update")
-	i := uint32(0)
+	i := uint64(0)
 
 	for {
 		select {
