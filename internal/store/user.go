@@ -8,5 +8,6 @@ import (
 
 type User interface {
 	Get(context.Context, model.ID) (*model.User, error)
+	GetByUsername(context.Context, string) (*model.User, error)
 	Add(context.Context, *model.User) error
 }

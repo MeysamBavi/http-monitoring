@@ -55,6 +55,15 @@ func (u *InMemoryUser) Get(_ context.Context, id model.ID) (*model.User, error) 
 	return user, nil
 }
 
+func (u *InMemoryUser) GetByUsername(_ context.Context, username string) (*model.User, error) {
+	userId, ok := u.usernames[username]
+	if !ok {
+		return nil, NewNotFoundError("user", "username", username)
+	}
+
+	return u.data[userId], nil
+}
+
 func (u *InMemoryUser) Add(_ context.Context, user *model.User) error {
 	if _, ok := u.usernames[user.Username]; ok {
 		return NewDuplicateError("user", "username", user.Username)
