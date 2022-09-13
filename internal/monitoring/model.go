@@ -1,10 +1,14 @@
 package monitoring
 
-import "time"
+import (
+	"time"
+
+	"github.com/MeysamBavi/http-monitoring/internal/model"
+)
 
 type Task struct {
 	URL    string
-	UserId uint32
+	UserId model.ID
 }
 
 type Result struct {
@@ -15,16 +19,16 @@ type Result struct {
 
 type TimedURL struct {
 	URL      string
-	UserId   uint32
+	UserId   model.ID
 	Interval time.Duration
 	callTime time.Time
 	index    int
 }
 
-func NewTimedURL(URL string, UserId uint32, Interval time.Duration) *TimedURL {
+func NewTimedURL(URL string, UserId uint64, Interval time.Duration) *TimedURL {
 	return &TimedURL{
 		URL:      URL,
-		UserId:   UserId,
+		UserId:   model.ID(UserId),
 		Interval: Interval,
 	}
 }
