@@ -101,21 +101,34 @@ func (u *InMemoryUrl) Add(_ context.Context, url *model.URL) error {
 	return nil
 }
 
-func (u *InMemoryUrl) AddStat(_ context.Context, userId model.ID, id model.ID, stat *model.DayStat) error {
+func (u *InMemoryUrl) UpdateStat(_ context.Context, userId model.ID, id model.ID, stat model.DayStat) (*model.URL, error) {
 
 	urls, ok := u.data[userId]
 	if !ok {
-		return NewNotFoundError("url", "userId", userId)
+		return nil, NewNotFoundError("url", "userId", userId)
 	}
 
+	// find url among user urls
 	for _, url := range urls {
-		if url.Id == id {
-			url.DayStats = append(url.DayStats, stat)
-			return nil
+		if url.Id != id {
+			continue
 		}
+
+		// find day stat among url day stats
+		for _, ds := range url.DayStats {
+			// apply change
+			if ds.Date.Equal(stat.Date) {
+				ds.FailureCount += stat.FailureCount
+				ds.SuccessCount += stat.SuccessCount
+				return url, nil
+			}
+		}
+		// if no day stat was found, add the passed day stat
+		url.DayStats = append(url.DayStats, &stat)
+		return url, nil
 	}
 
-	return NewNotFoundError("url", "id", id)
+	return nil, NewNotFoundError("url", "id", id)
 }
 
 type InMemoryAlert struct {

@@ -7,6 +7,7 @@ type URL struct {
 	UserId    ID
 	Url       string
 	Threshold int
+	Interval  time.Duration
 	DayStats  []*DayStat
 }
 
