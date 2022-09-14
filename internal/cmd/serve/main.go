@@ -40,6 +40,13 @@ func main(cfg *config.Config, logger *zap.Logger) {
 			JwtHandler: jh,
 		}
 		urh.Register(app.Group("/url"))
+
+		ah := api.AlertHandler{
+			Logger:     logger.Named("alert"),
+			AlertStore: s.Alert(),
+			JwtHandler: jh,
+		}
+		ah.Register(app.Group("/alert"))
 	}
 
 	app.Debug = cfg.Debug
