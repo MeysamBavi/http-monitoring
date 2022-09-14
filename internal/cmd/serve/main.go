@@ -33,6 +33,13 @@ func main(cfg *config.Config, logger *zap.Logger) {
 			JwtHandler: jh,
 		}
 		uh.Register(app.Group("/user"))
+
+		urh := api.UrlHandler{
+			Logger:     logger.Named("url"),
+			UrlStore:   s.Url(),
+			JwtHandler: jh,
+		}
+		urh.Register(app.Group("/url"))
 	}
 
 	app.Debug = cfg.Debug
