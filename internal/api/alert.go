@@ -52,5 +52,9 @@ func (h *AlertHandler) get(c echo.Context) error {
 		}
 	}
 
+	if alerts == nil {
+		alerts = make([]*model.Alert, 0)
+	}
+
 	return c.JSON(http.StatusOK, alerts)
 }

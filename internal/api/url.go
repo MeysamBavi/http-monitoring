@@ -52,6 +52,7 @@ func (h *UrlHandler) create(c echo.Context) error {
 	err := h.UrlStore.Add(ctx, url)
 
 	if err != nil {
+		h.Logger.Error("error adding url", zap.Error(err))
 		return echo.ErrInternalServerError
 	}
 
@@ -73,7 +74,12 @@ func (h *UrlHandler) getAll(c echo.Context) error {
 			return echo.NewHTTPError(http.StatusNotFound, notFound)
 		}
 
+		h.Logger.Error("error getting user urls", zap.Error(err))
 		return echo.ErrInternalServerError
+	}
+
+	if urls == nil {
+		urls = make([]*model.URL, 0)
 	}
 
 	return c.JSON(http.StatusOK, urls)

@@ -51,6 +51,7 @@ func (h *UserHandler) create(c echo.Context) error {
 			return echo.NewHTTPError(http.StatusBadRequest, "this username is already taken")
 		}
 
+		h.Logger.Error("error adding user", zap.Error(err))
 		return echo.ErrInternalServerError
 	}
 
@@ -81,6 +82,7 @@ func (h *UserHandler) login(c echo.Context) error {
 			return echo.NewHTTPError(http.StatusNotFound, "user not found")
 		}
 
+		h.Logger.Error("error getting user", zap.Error(err))
 		return echo.ErrInternalServerError
 	}
 
