@@ -39,4 +39,4 @@ require (
 	golang.org/x/text v0.3.7 // indirect
 )
 
-go 1.18
+go 1.19
