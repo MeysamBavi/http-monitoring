@@ -101,6 +101,32 @@ func (u *InMemoryUrl) Add(_ context.Context, url *model.URL) error {
 	return nil
 }
 
+func (u *InMemoryUrl) GetDayStat(_ context.Context, userId model.ID, id model.ID, date model.Date) (model.DayStat, error) {
+
+	urls, ok := u.data[userId]
+	if !ok {
+		return model.DayStat{}, NewNotFoundError("url", "userId", userId)
+	}
+
+	// find url among user urls
+	for _, url := range urls {
+		if url.Id != id {
+			continue
+		}
+
+		// find day stat among url day stats
+		for _, ds := range url.DayStats {
+			if ds.Date == date {
+				return *ds, nil
+			}
+		}
+
+		return model.DayStat{}, NewNotFoundError("stat", "date", date)
+	}
+
+	return model.DayStat{}, NewNotFoundError("url", "id", id)
+}
+
 func (u *InMemoryUrl) UpdateStat(_ context.Context, userId model.ID, id model.ID, stat model.DayStat) (*model.URL, error) {
 
 	urls, ok := u.data[userId]
@@ -117,7 +143,7 @@ func (u *InMemoryUrl) UpdateStat(_ context.Context, userId model.ID, id model.ID
 		// find day stat among url day stats
 		for _, ds := range url.DayStats {
 			// apply change
-			if ds.Date.Equal(stat.Date) {
+			if ds.Date == stat.Date {
 				ds.FailureCount += stat.FailureCount
 				ds.SuccessCount += stat.SuccessCount
 				return url, nil

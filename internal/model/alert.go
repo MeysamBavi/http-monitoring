@@ -3,9 +3,9 @@ package model
 import "time"
 
 type Alert struct {
-	Id       ID
-	UserId   ID
-	UrlId    ID
-	Url      string
-	IssuedAt time.Time
+	Id       ID        `json:"-"`
+	UserId   ID        `json:"-"`
+	UrlId    ID        `json:"url_id"`
+	Url      string    `json:"url"`
+	IssuedAt time.Time `json:"issued_at"`
 }

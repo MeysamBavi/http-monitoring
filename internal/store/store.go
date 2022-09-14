@@ -27,5 +27,5 @@ func (e DuplicateError) Error() string {
 }
 
 func NewDuplicateError(typ, field string, value any) error {
-	return DuplicateError(fmt.Sprintf("%s with %s=%d already exists", typ, field, value))
+	return DuplicateError(fmt.Sprintf("%s with %s=%v already exists", typ, field, value))
 }

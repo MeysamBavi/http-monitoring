@@ -4,5 +4,9 @@
   "monitoring": {
     "number_of_workers": 11,
     "request_timeout": "11s"
+  },
+  "auth": {
+    "signing_key": "ZajwfJeTPf3kjkeharWPjLZWXUBT7xFwU5dWxgIo",
+    "expire_after": "1h"
   }
 }

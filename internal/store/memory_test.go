@@ -118,7 +118,7 @@ func TestGetUserUrls(t *testing.T) {
 			UserId:    1,
 			Url:       "hello",
 			Threshold: 5,
-			Interval:  time.Minute,
+			Interval:  model.Interval{Duration: time.Minute},
 		}
 
 		if err := s.Url().Add(ctx, url); err != nil {
@@ -138,7 +138,7 @@ func TestGetUserUrls(t *testing.T) {
 			t.Errorf("id was equal to random Id: %d", urls[0].Id)
 		}
 
-		if urls[0].UserId != 1 || urls[0].Url != "hello" || urls[0].Threshold != 5 || urls[0].Interval != time.Minute {
+		if urls[0].UserId != 1 || urls[0].Url != "hello" || urls[0].Threshold != 5 || (urls[0].Interval != model.Interval{Duration: time.Minute}) {
 			t.Fatalf("unexpected value of url: %v", *urls[0])
 		}
 	}
@@ -155,7 +155,7 @@ func TestUpdateStat(t *testing.T) {
 			UserId:    1,
 			Url:       "hello",
 			Threshold: 5,
-			Interval:  time.Minute,
+			Interval:  model.Interval{Duration: time.Minute},
 		}
 
 		if err := s.Url().Add(ctx, url); err != nil {
@@ -171,7 +171,7 @@ func TestUpdateStat(t *testing.T) {
 			ctx,
 			1,
 			urlId,
-			model.DayStat{UrlId: urlId, Date: time.Date(2020, 3, 1, 0, 0, 0, 0, time.UTC), SuccessCount: 5, FailureCount: 6},
+			model.DayStat{UrlId: urlId, Date: model.Date{Year: 2020, Month: 3, Day: 1}, SuccessCount: 5, FailureCount: 6},
 		)
 
 		if err != nil {
@@ -189,7 +189,7 @@ func TestUpdateStat(t *testing.T) {
 		stat := url.DayStats[0]
 
 		if !(stat.UrlId == urlId &&
-			stat.Date == time.Date(2020, 3, 1, 0, 0, 0, 0, time.UTC) &&
+			stat.Date == model.Date{Year: 2020, Month: 3, Day: 1} &&
 			stat.SuccessCount == 5 &&
 			stat.FailureCount == 6) {
 			t.Fatalf("unexpected stat value: %v", stat)
@@ -202,7 +202,7 @@ func TestUpdateStat(t *testing.T) {
 			ctx,
 			1,
 			urlId,
-			model.DayStat{UrlId: urlId, Date: time.Date(2020, 3, 1, 0, 0, 0, 0, time.UTC), SuccessCount: 1, FailureCount: 1},
+			model.DayStat{UrlId: urlId, Date: model.Date{Year: 2020, Month: 3, Day: 1}, SuccessCount: 1, FailureCount: 1},
 		)
 
 		if err != nil {
