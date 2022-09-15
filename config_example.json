@@ -8,5 +8,13 @@
   "auth": {
     "signing_key": "ZajwfJeTPf3kjkeharWPjLZWXUBT7xFwU5dWxgIo",
     "expire_after": "1h"
+  },
+  "database": {
+    "uri": "mongodb://127.0.0.1:27018",
+    "db_name": "new_name",
+    "user_collection": "new_name1",
+    "url_collection": "new_name2",
+    "alert_collection": "new_name3",
+    "connection_timeout": "43s"
   }
 }

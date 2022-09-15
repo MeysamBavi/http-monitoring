@@ -33,6 +33,9 @@ func Default() Config {
 			URI:               "mongodb://127.0.0.1:27017",
 			DbName:            "httpm",
 			ConnectionTimeout: 2 * time.Second,
+			UserCollection:    "user",
+			UrlCollection:     "url",
+			AlertCollection:   "alert",
 		},
 	}
 }
