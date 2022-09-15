@@ -16,7 +16,6 @@ type URL struct {
 }
 
 type DayStat struct {
-	UrlId        ID   `json:"-"`
 	Date         Date `json:"date"`
 	SuccessCount int  `json:"success_count"`
 	FailureCount int  `json:"failure_count"`
