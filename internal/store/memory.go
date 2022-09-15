@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"time"
 
 	"github.com/MeysamBavi/http-monitoring/internal/model"
 	"go.uber.org/zap"
@@ -165,6 +166,25 @@ func (u *InMemoryUrl) ForAll(_ context.Context, callBack func(model.URL)) error 
 	}
 
 	return nil
+}
+
+// for test only
+func (u *InMemoryUrl) ListenForChanges(_ context.Context, out chan<- UrlChangeEvent) error {
+	i := model.ID(1)
+	for {
+		time.Sleep(10 * time.Second)
+		out <- UrlChangeEvent{
+			Url: model.URL{
+				Id:        i,
+				UserId:    i,
+				Url:       "https://httpbin.org/status/206",
+				Threshold: 20,
+				Interval:  model.Interval{Duration: 30 * time.Second},
+			},
+			Operation: UrlChangeOperationInsert,
+		}
+		i++
+	}
 }
 
 type InMemoryAlert struct {

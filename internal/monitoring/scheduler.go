@@ -133,7 +133,8 @@ func (s *Scheduler) schedule(syncedHeap *util.SyncHeap[*TimedURL], in chan<- *Ta
 			}
 			earliestUrl := syncedHeap.Peek()
 			if time.Now().Before(earliestUrl.callTime) {
-				time.Sleep(time.Until(earliestUrl.callTime))
+				time.Sleep(time.Millisecond * 100)
+				continue
 			}
 
 			logger.Debug("sending this url to workers", zap.String("url", earliestUrl.URL))
@@ -151,22 +152,26 @@ func (s *Scheduler) schedule(syncedHeap *util.SyncHeap[*TimedURL], in chan<- *Ta
 
 // reads from db and updates heap
 func (s *Scheduler) update(syncHeap *util.SyncHeap[*TimedURL], shutdown <-chan int, done chan<- int) {
-	// Todo: listen for updates from database
-
 	logger := s.logger.Named("update")
-	i := model.ID(0)
+
+	events := make(chan store.UrlChangeEvent, 100)
+	go s.dataStore.Url().ListenForChanges(context.Background(), events)
 
 	for {
 		select {
 		case <-shutdown:
 			done <- 0
 			return
-		default:
-			//Todo: remove this
-			time.Sleep(10 * time.Second)
-			logger.Debug("updating heap")
-			syncHeap.Push(NewTimedURL(i, "https://httpbin.org/status/206", i, 10*time.Second))
-			i++
+		case event := <-events:
+			if event.Operation == store.UrlChangeOperationInsert {
+				logger.Debug("updating heap", zap.Any("event", event))
+				syncHeap.Push(NewTimedURL(
+					event.Url.Id,
+					event.Url.Url,
+					event.Url.UserId,
+					event.Url.Interval.Duration,
+				))
+			}
 		}
 	}
 }
