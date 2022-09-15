@@ -167,11 +167,11 @@ func TestUpdateStat(t *testing.T) {
 
 	// Add
 	{
-		url, err := s.Url().UpdateStat(
+		url, stat, err := s.Url().UpdateStat(
 			ctx,
 			1,
 			urlId,
-			model.DayStat{UrlId: urlId, Date: model.Date{Year: 2020, Month: 3, Day: 1}, SuccessCount: 5, FailureCount: 6},
+			model.DayStat{Date: model.Date{Year: 2020, Month: 3, Day: 1}, SuccessCount: 5, FailureCount: 6},
 		)
 
 		if err != nil {
@@ -186,10 +186,7 @@ func TestUpdateStat(t *testing.T) {
 			t.Fatalf("stats list length is not one: %v", url.DayStats)
 		}
 
-		stat := url.DayStats[0]
-
-		if !(stat.UrlId == urlId &&
-			stat.Date == model.Date{Year: 2020, Month: 3, Day: 1} &&
+		if !(stat.Date == model.Date{Year: 2020, Month: 3, Day: 1} &&
 			stat.SuccessCount == 5 &&
 			stat.FailureCount == 6) {
 			t.Fatalf("unexpected stat value: %v", stat)
@@ -198,11 +195,11 @@ func TestUpdateStat(t *testing.T) {
 
 	// Update
 	{
-		url, err := s.Url().UpdateStat(
+		url, stat, err := s.Url().UpdateStat(
 			ctx,
 			1,
 			urlId,
-			model.DayStat{UrlId: urlId, Date: model.Date{Year: 2020, Month: 3, Day: 1}, SuccessCount: 1, FailureCount: 1},
+			model.DayStat{Date: model.Date{Year: 2020, Month: 3, Day: 1}, SuccessCount: 1, FailureCount: 1},
 		)
 
 		if err != nil {
@@ -217,10 +214,7 @@ func TestUpdateStat(t *testing.T) {
 			t.Fatalf("stats list length is not one: %v", url.DayStats)
 		}
 
-		stat := url.DayStats[0]
-
-		if !(stat.UrlId == urlId &&
-			stat.SuccessCount == 6 &&
+		if !(stat.SuccessCount == 6 &&
 			stat.FailureCount == 7) {
 			t.Fatalf("unexpected stat value: %v", stat)
 		}

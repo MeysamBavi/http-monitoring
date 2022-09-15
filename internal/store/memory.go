@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"time"
 
 	"github.com/MeysamBavi/http-monitoring/internal/model"
 	"go.uber.org/zap"
@@ -127,11 +128,11 @@ func (u *InMemoryUrl) GetDayStat(_ context.Context, userId model.ID, id model.ID
 	return model.DayStat{}, NewNotFoundError("url", "id", id)
 }
 
-func (u *InMemoryUrl) UpdateStat(_ context.Context, userId model.ID, id model.ID, stat model.DayStat) (*model.URL, error) {
+func (u *InMemoryUrl) UpdateStat(_ context.Context, userId model.ID, id model.ID, stat model.DayStat) (*model.URL, model.DayStat, error) {
 
 	urls, ok := u.data[userId]
 	if !ok {
-		return nil, NewNotFoundError("url", "userId", userId)
+		return nil, model.DayStat{}, NewNotFoundError("url", "userId", userId)
 	}
 
 	// find url among user urls
@@ -146,15 +147,44 @@ func (u *InMemoryUrl) UpdateStat(_ context.Context, userId model.ID, id model.ID
 			if ds.Date == stat.Date {
 				ds.FailureCount += stat.FailureCount
 				ds.SuccessCount += stat.SuccessCount
-				return url, nil
+				return url, *ds, nil
 			}
 		}
 		// if no day stat was found, add the passed day stat
 		url.DayStats = append(url.DayStats, &stat)
-		return url, nil
+		return url, stat, nil
 	}
 
-	return nil, NewNotFoundError("url", "id", id)
+	return nil, model.DayStat{}, NewNotFoundError("url", "id", id)
+}
+
+func (u *InMemoryUrl) ForAll(_ context.Context, callBack func(model.URL)) error {
+	for _, urls := range u.data {
+		for _, url := range urls {
+			callBack(*url)
+		}
+	}
+
+	return nil
+}
+
+// for test only
+func (u *InMemoryUrl) ListenForChanges(_ context.Context, out chan<- UrlChangeEvent) error {
+	i := model.ID(1)
+	for {
+		time.Sleep(10 * time.Second)
+		out <- UrlChangeEvent{
+			Url: model.URL{
+				Id:        i,
+				UserId:    i,
+				Url:       "https://httpbin.org/status/206",
+				Threshold: 20,
+				Interval:  model.Interval{Duration: 30 * time.Second},
+			},
+			Operation: UrlChangeOperationInsert,
+		}
+		i++
+	}
 }
 
 type InMemoryAlert struct {
