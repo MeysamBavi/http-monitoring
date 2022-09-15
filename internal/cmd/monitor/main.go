@@ -7,6 +7,7 @@ import (
 
 	"github.com/MeysamBavi/http-monitoring/internal/config"
 	"github.com/MeysamBavi/http-monitoring/internal/monitoring"
+	"github.com/MeysamBavi/http-monitoring/internal/store"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
@@ -14,10 +15,13 @@ import (
 func main(cfg *config.Config, logger *zap.Logger) {
 	logger.Debug("starting the monitoring service")
 
+	s := store.NewInMemoryStore(logger.Named("store"))
+
 	scheduler := monitoring.NewScheduler(
 		logger.Named("scheduler"),
 		cfg.Monitoring.NumberOfWorkers,
 		cfg.Monitoring.RequestTimeout,
+		s,
 	)
 
 	shutdown := make(chan os.Signal, 1)

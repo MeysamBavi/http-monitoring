@@ -7,6 +7,7 @@ import (
 )
 
 type Task struct {
+	UrlId  model.ID
 	URL    string
 	UserId model.ID
 }
@@ -18,6 +19,7 @@ type Result struct {
 }
 
 type TimedURL struct {
+	UrlId    model.ID
 	URL      string
 	UserId   model.ID
 	Interval time.Duration
@@ -25,10 +27,11 @@ type TimedURL struct {
 	index    int
 }
 
-func NewTimedURL(URL string, UserId uint64, Interval time.Duration) *TimedURL {
+func NewTimedURL(UrlId model.ID, URL string, UserId model.ID, Interval time.Duration) *TimedURL {
 	return &TimedURL{
+		UrlId:    UrlId,
 		URL:      URL,
-		UserId:   model.ID(UserId),
+		UserId:   UserId,
 		Interval: Interval,
 	}
 }

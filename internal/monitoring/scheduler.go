@@ -1,11 +1,14 @@
 package monitoring
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"sync"
 	"time"
 
+	"github.com/MeysamBavi/http-monitoring/internal/model"
+	"github.com/MeysamBavi/http-monitoring/internal/store"
 	"github.com/MeysamBavi/http-monitoring/internal/util"
 	"go.uber.org/zap"
 )
@@ -14,13 +17,15 @@ type Scheduler struct {
 	logger         *zap.Logger
 	numOfWorkers   int
 	requestTimeout time.Duration
+	dataStore      store.Store
 }
 
-func NewScheduler(logger *zap.Logger, numOfWorkers int, requestTimeout time.Duration) *Scheduler {
+func NewScheduler(logger *zap.Logger, numOfWorkers int, requestTimeout time.Duration, dataStore store.Store) *Scheduler {
 	return &Scheduler{
 		logger,
 		numOfWorkers,
 		requestTimeout,
+		dataStore,
 	}
 }
 
@@ -97,9 +102,18 @@ func (s *Scheduler) waitForShutdown(scope *scope) {
 }
 
 func (s *Scheduler) initializeHeap() *util.SyncHeap[*TimedURL] {
-	//Todo: initialize heap from database
 
-	return util.NewSyncHeap[*TimedURL](NewHeap())
+	all := make([]*TimedURL, 0)
+	err := s.dataStore.Url().ForAll(context.Background(), func(u model.URL) {
+		t := NewTimedURL(u.Id, u.Url, u.UserId, u.Interval.Duration)
+		all = append(all, t)
+	})
+
+	if err != nil {
+		s.logger.Fatal("error reading all urls", zap.Error(err))
+	}
+
+	return util.NewSyncHeap[*TimedURL](NewHeap(all...))
 }
 
 // writes to "in" and closes it when shutdown signal is received
@@ -124,6 +138,7 @@ func (s *Scheduler) schedule(syncedHeap *util.SyncHeap[*TimedURL], in chan<- *Ta
 
 			logger.Debug("sending this url to workers", zap.String("url", earliestUrl.URL))
 			in <- &Task{
+				UrlId:  earliestUrl.UrlId,
 				URL:    earliestUrl.URL,
 				UserId: earliestUrl.UserId,
 			}
@@ -139,7 +154,7 @@ func (s *Scheduler) update(syncHeap *util.SyncHeap[*TimedURL], shutdown <-chan i
 	// Todo: listen for updates from database
 
 	logger := s.logger.Named("update")
-	i := uint64(0)
+	i := model.ID(0)
 
 	for {
 		select {
@@ -150,7 +165,7 @@ func (s *Scheduler) update(syncHeap *util.SyncHeap[*TimedURL], shutdown <-chan i
 			//Todo: remove this
 			time.Sleep(10 * time.Second)
 			logger.Debug("updating heap")
-			syncHeap.Push(NewTimedURL("https://httpbin.org/status/206", i, 10*time.Second))
+			syncHeap.Push(NewTimedURL(i, "https://httpbin.org/status/206", i, 10*time.Second))
 			i++
 		}
 	}
@@ -163,7 +178,40 @@ func (s *Scheduler) collect(out <-chan *Result, done chan<- int) {
 	for r := range out {
 		logger.Debug("saving this result to db", zap.Any("result", r))
 
-		//Todo: save to database
+		var success, failure int
+		if r.StatusCode >= 200 && r.StatusCode < 300 {
+			success = 1
+			failure = 0
+		} else {
+			success = 0
+			failure = 1
+		}
+
+		url, stat, err := s.dataStore.Url().UpdateStat(context.Background(), r.Task.UserId, r.Task.UrlId, model.DayStat{
+			Date:         model.Today(),
+			SuccessCount: success,
+			FailureCount: failure,
+		})
+
+		if err != nil {
+			s.logger.Error("error updating stat", zap.Error(err), zap.Any("stat", stat))
+			continue
+		}
+
+		// send alert if has passed failure threshold
+		if stat.FailureCount > 0 && stat.FailureCount%url.Threshold == 0 {
+			err := s.dataStore.Alert().Add(context.Background(), &model.Alert{
+				UserId:   url.UserId,
+				UrlId:    url.Id,
+				Url:      url.Url,
+				IssuedAt: time.Now(),
+			})
+
+			if err != nil {
+				s.logger.Error("error adding alert", zap.Error(err), zap.Any("url", url))
+				continue
+			}
+		}
 	}
 
 	done <- 0
