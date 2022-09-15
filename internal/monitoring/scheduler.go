@@ -133,7 +133,13 @@ func (s *Scheduler) schedule(syncedHeap *util.SyncHeap[*TimedURL], in chan<- *Ta
 			}
 			earliestUrl := syncedHeap.Peek()
 			if time.Now().Before(earliestUrl.callTime) {
-				time.Sleep(time.Millisecond * 100)
+				max := time.Millisecond * 100
+				until := time.Until(earliestUrl.callTime)
+				if until < max {
+					time.Sleep(until)
+				} else {
+					time.Sleep(max)
+				}
 				continue
 			}
 
