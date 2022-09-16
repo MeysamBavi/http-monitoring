@@ -16,14 +16,14 @@ func TestUserGetAndAdd(t *testing.T) {
 	ctx := context.Background()
 
 	if err := s.User().Add(ctx, &model.User{
-		Id:       123,
+		Id:       "123",
 		Username: "meysam",
 		Password: "123456",
 	}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	user, err := s.User().Get(ctx, 123)
+	user, err := s.User().Get(ctx, "123")
 
 	var notFoundError store.NotFoundError
 	if err == nil || !errors.As(err, &notFoundError) {
@@ -50,7 +50,7 @@ func TestUniqueUsername(t *testing.T) {
 	ctx := context.Background()
 
 	if err := s.User().Add(ctx, &model.User{
-		Id:       123,
+		Id:       "123",
 		Username: "meysam",
 		Password: "123456",
 	}); err != nil {
@@ -58,7 +58,7 @@ func TestUniqueUsername(t *testing.T) {
 	}
 
 	err := s.User().Add(ctx, &model.User{
-		Id:       1,
+		Id:       "1",
 		Username: "meysam",
 		Password: "",
 	})
@@ -73,7 +73,7 @@ func TestGetUsernameById(t *testing.T) {
 	s := store.NewInMemoryStore(zap.NewNop())
 	ctx := context.Background()
 
-	randomId := model.ID(123)
+	randomId := model.ID("123")
 	user := &model.User{
 		Id:       randomId,
 		Username: "meysam",
@@ -85,7 +85,7 @@ func TestGetUsernameById(t *testing.T) {
 	}
 
 	if user.Id == randomId {
-		t.Errorf("id was equal to random Id: %d", user.Id)
+		t.Errorf("id was equal to random Id: %v", user.Id)
 	}
 
 	{
@@ -105,17 +105,17 @@ func TestGetUserUrls(t *testing.T) {
 	ctx := context.Background()
 
 	{
-		urls, err := s.Url().GetByUserId(ctx, 1)
+		urls, err := s.Url().GetByUserId(ctx, "1")
 		if len(urls) != 0 || err != nil {
 			t.Fatalf("urls should be empty, err must be nil: %v %v", urls, err)
 		}
 	}
 
 	{
-		randomId := model.ID(123)
+		randomId := model.ID("123")
 		url := &model.URL{
 			Id:        randomId,
-			UserId:    1,
+			UserId:    "1",
 			Url:       "hello",
 			Threshold: 5,
 			Interval:  model.Interval{Duration: time.Minute},
@@ -125,7 +125,7 @@ func TestGetUserUrls(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		urls, err := s.Url().GetByUserId(ctx, 1)
+		urls, err := s.Url().GetByUserId(ctx, "1")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -135,10 +135,10 @@ func TestGetUserUrls(t *testing.T) {
 		}
 
 		if urls[0].Id == randomId {
-			t.Errorf("id was equal to random Id: %d", urls[0].Id)
+			t.Errorf("id was equal to random Id: %v", urls[0].Id)
 		}
 
-		if urls[0].UserId != 1 || urls[0].Url != "hello" || urls[0].Threshold != 5 || (urls[0].Interval != model.Interval{Duration: time.Minute}) {
+		if urls[0].UserId != "1" || urls[0].Url != "hello" || urls[0].Threshold != 5 || (urls[0].Interval != model.Interval{Duration: time.Minute}) {
 			t.Fatalf("unexpected value of url: %v", *urls[0])
 		}
 	}
@@ -152,7 +152,7 @@ func TestUpdateStat(t *testing.T) {
 	var urlId model.ID
 	{
 		url := &model.URL{
-			UserId:    1,
+			UserId:    "1",
 			Url:       "hello",
 			Threshold: 5,
 			Interval:  model.Interval{Duration: time.Minute},
@@ -169,7 +169,7 @@ func TestUpdateStat(t *testing.T) {
 	{
 		url, stat, err := s.Url().UpdateStat(
 			ctx,
-			1,
+			"1",
 			urlId,
 			model.DayStat{Date: model.Date{Year: 2020, Month: 3, Day: 1}, SuccessCount: 5, FailureCount: 6},
 		)
@@ -179,7 +179,7 @@ func TestUpdateStat(t *testing.T) {
 		}
 
 		if url.Id != urlId {
-			t.Fatalf("Ids don't match: %d != %d", url.Id, urlId)
+			t.Fatalf("Ids don't match: %v != %v", url.Id, urlId)
 		}
 
 		if len(url.DayStats) != 1 {
@@ -197,7 +197,7 @@ func TestUpdateStat(t *testing.T) {
 	{
 		url, stat, err := s.Url().UpdateStat(
 			ctx,
-			1,
+			"1",
 			urlId,
 			model.DayStat{Date: model.Date{Year: 2020, Month: 3, Day: 1}, SuccessCount: 1, FailureCount: 1},
 		)
@@ -207,7 +207,7 @@ func TestUpdateStat(t *testing.T) {
 		}
 
 		if url.Id != urlId {
-			t.Fatalf("Ids don't match: %d != %d", url.Id, urlId)
+			t.Fatalf("Ids don't match: %v != %v", url.Id, urlId)
 		}
 
 		if len(url.DayStats) != 1 {
@@ -226,7 +226,7 @@ func TestAddAndGetAlert(t *testing.T) {
 	ctx := context.Background()
 
 	{
-		alerts, err := s.Alert().GetByUrlId(ctx, 1)
+		alerts, err := s.Alert().GetByUrlId(ctx, "1")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -237,11 +237,11 @@ func TestAddAndGetAlert(t *testing.T) {
 	}
 
 	{
-		randomId := model.ID(123)
+		randomId := model.ID("123")
 		alert := &model.Alert{
 			Id:       randomId,
-			UserId:   1,
-			UrlId:    1,
+			UserId:   "1",
+			UrlId:    "1",
 			Url:      "hello",
 			IssuedAt: time.Date(2020, 3, 1, 0, 0, 0, 0, time.UTC),
 		}
@@ -251,12 +251,12 @@ func TestAddAndGetAlert(t *testing.T) {
 		}
 
 		if alert.Id == randomId {
-			t.Errorf("id was equal to random Id: %d", alert.Id)
+			t.Errorf("id was equal to random Id: %v", alert.Id)
 		}
 	}
 
 	{
-		alerts, err := s.Alert().GetByUrlId(ctx, 1)
+		alerts, err := s.Alert().GetByUrlId(ctx, "1")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -267,7 +267,7 @@ func TestAddAndGetAlert(t *testing.T) {
 
 		a := alerts[0]
 
-		if !(a.UserId == 1 && a.UrlId == 1 && a.Url == "hello" && a.IssuedAt == time.Date(2020, 3, 1, 0, 0, 0, 0, time.UTC)) {
+		if !(a.UserId == "1" && a.UrlId == "1" && a.Url == "hello" && a.IssuedAt == time.Date(2020, 3, 1, 0, 0, 0, 0, time.UTC)) {
 			t.Fatalf("unexpected value of alert: %v", *a)
 		}
 	}

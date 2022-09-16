@@ -1,14 +1,11 @@
 package model
 
-import "strconv"
-
-type ID uint64
+type ID string
 
 func (id ID) String() string {
-	return strconv.FormatUint(uint64(id), 10)
+	return string(id)
 }
 
 func ParseId(str string) (ID, error) {
-	id, err := strconv.ParseUint(str, 10, 64)
-	return ID(id), err
+	return ID(str), nil
 }
