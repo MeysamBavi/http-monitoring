@@ -22,8 +22,10 @@ func main(cfg *config.Config, logger *zap.Logger) {
 		idx, err := db.Collection(cfg.Database.UserCollection).Indexes().CreateOne(
 			context.Background(),
 			mongo.IndexModel{
-				Keys:    bson.D{{Key: "username", Value: 1}},
-				Options: options.Index().SetUnique(true),
+				Keys: bson.D{{Key: "username", Value: 1}},
+				Options: options.Index().
+					SetUnique(true).
+					SetCollation(&options.Collation{Locale: "en", Strength: 2}),
 			},
 		)
 
