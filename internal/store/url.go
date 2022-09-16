@@ -17,12 +17,12 @@ type Url interface {
 }
 
 type UrlChangeEvent struct {
-	Url       model.URL
-	Operation int
+	Url       model.URL `bson:"fullDocument"`
+	Operation string    `bson:"operationType"`
 }
 
 const (
-	UrlChangeOperationInsert = 1
-	UrlChangeOperationUpdate = 2
-	UrlChangeOperationDelete = 3
+	UrlChangeOperationInsert = "insert"
+	UrlChangeOperationUpdate = "update"
+	UrlChangeOperationDelete = "delete"
 )

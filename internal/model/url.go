@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 type URL struct {
@@ -13,6 +15,16 @@ type URL struct {
 	Threshold int        `json:"threshold" bson:"threshold"`
 	Interval  Interval   `json:"interval" bson:"interval"`
 	DayStats  []*DayStat `json:"-" bson:"day_stats"`
+}
+
+func (u *URL) NoId() bson.M {
+	return bson.M{
+		"user_id":   u.UserId,
+		"url":       u.Url,
+		"threshold": u.Threshold,
+		"interval":  u.Interval,
+		"day_stats": u.DayStats,
+	}
 }
 
 type DayStat struct {

@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/MeysamBavi/http-monitoring/internal/model"
@@ -56,10 +57,10 @@ func (m *MongodbUser) Add(ctx context.Context, doc *model.User) error {
 			return NewDuplicateError("user", "username", doc.Username)
 		}
 
-		return fmt.Errorf("document creation on user collection failed: %w", err)
+		return fmt.Errorf("error creating document: %w", err)
 	}
 
-	doc.Id, _ = model.ParseId(r.InsertedID.(primitive.ObjectID).Hex()) // set the new id for caller
+	doc.Id = model.ParseIdFromObjectId(r.InsertedID.(primitive.ObjectID)) // set the new id for caller
 
 	return nil
 }
@@ -89,7 +90,11 @@ func (m *MongodbUser) GetByUsername(ctx context.Context, username string) (*mode
 	)
 
 	if r.Err() != nil {
-		return nil, NewNotFoundError("user", "username", username)
+		if r.Err() == mongo.ErrNoDocuments {
+			return nil, NewNotFoundError("user", "username", username)
+		}
+
+		return nil, fmt.Errorf("error getting url: %w", r.Err())
 	}
 
 	var user model.User
@@ -104,38 +109,222 @@ type MongodbUrl struct {
 	coll *mongo.Collection
 }
 
-func (m *MongodbUrl) Add(context.Context, *model.URL) error {
-	panic("unimplemented")
+func (m *MongodbUrl) Add(ctx context.Context, doc *model.URL) error {
+	r, err := m.coll.InsertOne(
+		ctx,
+		doc.NoId(), // pass the document without _id field to generate new id
+	)
+
+	if err != nil {
+		return fmt.Errorf("error creating document: %w", err)
+	}
+
+	doc.Id = model.ParseIdFromObjectId(r.InsertedID.(primitive.ObjectID)) // set the new id for caller
+
+	return nil
 }
 
-func (*MongodbUrl) ForAll(context.Context, func(model.URL)) error {
-	panic("unimplemented")
+func (m *MongodbUrl) ForAll(ctx context.Context, action func(model.URL)) error {
+	cursor, err := m.coll.Find(ctx, bson.D{})
+
+	if err != nil {
+		return fmt.Errorf("error reading all documents: %w", err)
+	}
+
+	for cursor.Next(ctx) {
+		if cursor.Err() != nil {
+			return fmt.Errorf("error reading from cursor: %w", err)
+		}
+
+		var url model.URL
+		if err := cursor.Decode(&url); err != nil {
+			return fmt.Errorf("error decoding current cursor value to url: %w", err)
+		}
+
+		action(url)
+	}
+
+	return nil
 }
 
-func (*MongodbUrl) GetByUserId(context.Context, model.ID) ([]*model.URL, error) {
-	panic("unimplemented")
+func (m *MongodbUrl) GetByUserId(ctx context.Context, id model.ID) ([]*model.URL, error) {
+	cursor, err := m.coll.Find(
+		ctx,
+		bson.M{
+			"user_id": id,
+		},
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("error reading from url collection: %w", err)
+	}
+
+	all := make([]*model.URL, 0)
+	if err := cursor.All(ctx, &all); err != nil {
+		return nil, fmt.Errorf("error decoding all results to url: %w", err)
+	}
+
+	return all, nil
 }
 
-func (*MongodbUrl) GetDayStat(ctx context.Context, userId model.ID, id model.ID, date model.Date) (model.DayStat, error) {
-	panic("unimplemented")
+func (m *MongodbUrl) GetDayStat(ctx context.Context, userId model.ID, id model.ID, date model.Date) (model.DayStat, error) {
+	r := m.coll.FindOne(
+		ctx,
+		bson.M{
+			"_id":     id.ObjectId(),
+			"user_id": userId,
+		},
+	)
+
+	if r.Err() != nil {
+		if r.Err() == mongo.ErrNoDocuments {
+			return model.DayStat{}, NotFoundError("found no url matching the parameters")
+		}
+
+		return model.DayStat{}, fmt.Errorf("error getting url: %w", r.Err())
+	}
+
+	var url model.URL
+	if err := r.Decode(&url); err != nil {
+		return model.DayStat{}, fmt.Errorf("could not decode result into url: %w", err)
+	}
+
+	for _, stat := range url.DayStats {
+		if stat.Date == date {
+			return *stat, nil
+		}
+	}
+
+	return model.DayStat{}, NewNotFoundError("dayStat", "date", date)
 }
 
-func (*MongodbUrl) ListenForChanges(context.Context, chan<- UrlChangeEvent) error {
-	panic("unimplemented")
+func (m *MongodbUrl) ListenForChanges(ctx context.Context, events chan<- UrlChangeEvent) error {
+	pipeline := mongo.Pipeline{
+		bson.D{
+			{"$match", bson.D{
+				{"operationType", bson.D{{
+					"$in", bson.A{UrlChangeOperationInsert, UrlChangeOperationUpdate, UrlChangeOperationDelete}}},
+				}},
+			},
+			{"$project", bson.D{
+				{"fullDocument", 1},
+				{"operationType", 1},
+			}},
+		},
+	}
+
+	cs, err := m.coll.Watch(ctx, pipeline)
+	if err != nil {
+		return fmt.Errorf("error listening to changes: %w", err)
+	}
+
+	for cs.Next(ctx) {
+		var event UrlChangeEvent
+		if err := cs.Decode(&event); err != nil {
+			return fmt.Errorf("error decoding change event: %w", err)
+		}
+
+		events <- event
+	}
+
+	return nil
 }
 
-func (*MongodbUrl) UpdateStat(ctx context.Context, userId model.ID, id model.ID, stat model.DayStat) (*model.URL, model.DayStat, error) {
-	panic("unimplemented")
+func (m *MongodbUrl) UpdateStat(ctx context.Context, userId model.ID, id model.ID, stat model.DayStat) (*model.URL, model.DayStat, error) {
+	r := m.coll.FindOneAndUpdate(
+		ctx,
+		bson.M{
+			"_id":     id.ObjectId(),
+			"user_id": userId,
+			"day_stats": bson.M{
+				"$elemMatch": bson.M{
+					"date": stat.Date,
+				},
+			},
+		},
+		bson.M{
+			"$inc": bson.M{
+				"day_stats.$.success_count": stat.SuccessCount,
+				"day_stats.$.failure_count": stat.FailureCount,
+			},
+		},
+	)
+
+	if r.Err() != nil {
+		if r.Err() != mongo.ErrNoDocuments {
+			return nil, model.DayStat{}, fmt.Errorf("error updating url stat: %w", r.Err())
+		}
+
+		// no stat found, create a new one
+		r2, err := m.coll.UpdateOne(
+			ctx,
+			bson.M{
+				"_id":     id.ObjectId(),
+				"user_id": userId,
+			},
+			bson.M{
+				"$push": bson.M{
+					"day_stats": stat,
+				},
+			},
+		)
+
+		if err != nil {
+			return nil, model.DayStat{}, fmt.Errorf("error updating url: %w", err)
+		}
+
+		if r2.MatchedCount == 0 {
+			return nil, model.DayStat{}, NotFoundError("found no url matching the parameters")
+		}
+
+		return nil, stat, nil
+	}
+
+	var url model.URL
+	if err := r.Decode(&url); err != nil {
+		return nil, model.DayStat{}, fmt.Errorf("could not decode result into url: %w", err)
+	}
+
+	for _, s := range url.DayStats {
+		if s.Date == stat.Date {
+			return &url, *s, nil
+		}
+	}
+
+	return nil, model.DayStat{}, errors.New("could not find updated stat")
 }
 
 type MongodbAlert struct {
 	coll *mongo.Collection
 }
 
-func (*MongodbAlert) Add(context.Context, *model.Alert) error {
-	panic("unimplemented")
+func (m *MongodbAlert) Add(ctx context.Context, alert *model.Alert) error {
+	r, err := m.coll.InsertOne(ctx, alert.NoId())
+	if err != nil {
+		return fmt.Errorf("error inserting alert: %w", err)
+	}
+
+	alert.Id = model.ParseIdFromObjectId(r.InsertedID.(primitive.ObjectID))
+
+	return nil
 }
 
-func (*MongodbAlert) GetByUrlId(context.Context, model.ID) ([]*model.Alert, error) {
-	panic("unimplemented")
+func (m *MongodbAlert) GetByUrlId(ctx context.Context, id model.ID) ([]*model.Alert, error) {
+	cursor, err := m.coll.Find(
+		ctx,
+		bson.M{
+			"url_id": id,
+		},
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("error reading from alert collection: %w", err)
+	}
+
+	all := make([]*model.Alert, 0)
+	if err := cursor.All(ctx, &all); err != nil {
+		return nil, fmt.Errorf("error decoding all results to alert: %w", err)
+	}
+
+	return all, nil
 }
