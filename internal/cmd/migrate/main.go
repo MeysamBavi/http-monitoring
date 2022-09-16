@@ -13,7 +13,7 @@ import (
 )
 
 func main(cfg *config.Config, logger *zap.Logger) {
-	db, err := db.New(logger.Named("db"), cfg.Database)
+	db, err := db.New(cfg.Database)
 	if err != nil {
 		logger.Fatal("cannot create a db instance", zap.Error(err))
 	}

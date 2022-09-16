@@ -6,10 +6,9 @@ import (
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"go.uber.org/zap"
 )
 
-func New(logger *zap.Logger, cfg Config) (*mongo.Database, error) {
+func New(cfg Config) (*mongo.Database, error) {
 	options := options.Client()
 	options.ApplyURI(cfg.URI)
 	options.SetConnectTimeout(cfg.ConnectionTimeout)
