@@ -6,6 +6,7 @@ import (
 	"syscall"
 
 	"github.com/MeysamBavi/http-monitoring/internal/config"
+	"github.com/MeysamBavi/http-monitoring/internal/db"
 	"github.com/MeysamBavi/http-monitoring/internal/monitoring"
 	"github.com/MeysamBavi/http-monitoring/internal/store"
 	"github.com/spf13/cobra"
@@ -15,7 +16,19 @@ import (
 func main(cfg *config.Config, logger *zap.Logger) {
 	logger.Debug("starting the monitoring service")
 
-	s := store.NewInMemoryStore(logger.Named("store"))
+	db, err := db.New(cfg.Database)
+	if err != nil {
+		logger.Fatal("cannot create a db instance", zap.Error(err))
+	}
+	logger.Info("connected to mongo db", zap.Any("name", db.Name()))
+
+	s := store.NewMongodbStore(
+		logger.Named("mongo"),
+		db,
+		db.Collection(cfg.Database.UserCollection),
+		db.Collection(cfg.Database.UrlCollection),
+		db.Collection(cfg.Database.AlertCollection),
+	)
 
 	scheduler := monitoring.NewScheduler(
 		logger.Named("scheduler"),
