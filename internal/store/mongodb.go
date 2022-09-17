@@ -68,7 +68,7 @@ func (m *MongodbUser) Add(ctx context.Context, doc *model.User) error {
 func (m *MongodbUser) Get(ctx context.Context, id model.ID) (*model.User, error) {
 	r := m.coll.FindOne(
 		ctx,
-		bson.M{"_id": id},
+		bson.M{"_id": id.ObjectId()},
 	)
 
 	if r.Err() != nil {
@@ -110,6 +110,8 @@ type MongodbUrl struct {
 }
 
 func (m *MongodbUrl) Add(ctx context.Context, doc *model.URL) error {
+	doc.DayStats = make([]*model.DayStat, 0)
+
 	r, err := m.coll.InsertOne(
 		ctx,
 		doc.NoId(), // pass the document without _id field to generate new id
@@ -256,7 +258,7 @@ func (m *MongodbUrl) UpdateStat(ctx context.Context, userId model.ID, id model.I
 		}
 
 		// no stat found, create a new one
-		r2, err := m.coll.UpdateOne(
+		r = m.coll.FindOneAndUpdate(
 			ctx,
 			bson.M{
 				"_id":     id.ObjectId(),
@@ -269,15 +271,19 @@ func (m *MongodbUrl) UpdateStat(ctx context.Context, userId model.ID, id model.I
 			},
 		)
 
-		if err != nil {
-			return nil, model.DayStat{}, fmt.Errorf("error updating url: %w", err)
+		if r.Err() != nil {
+			if r.Err() == mongo.ErrNoDocuments {
+				return nil, model.DayStat{}, NotFoundError("found no url matching the parameters")
+			}
+			return nil, model.DayStat{}, fmt.Errorf("error updating url stat: %w", r.Err())
 		}
 
-		if r2.MatchedCount == 0 {
-			return nil, model.DayStat{}, NotFoundError("found no url matching the parameters")
+		var url model.URL
+		if err := r.Decode(&url); err != nil {
+			return nil, model.DayStat{}, fmt.Errorf("could not decode result into url: %w", err)
 		}
 
-		return nil, stat, nil
+		return &url, stat, nil
 	}
 
 	var url model.URL

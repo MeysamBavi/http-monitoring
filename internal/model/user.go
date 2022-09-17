@@ -3,9 +3,9 @@ package model
 import "go.mongodb.org/mongo-driver/bson"
 
 type User struct {
-	Id       ID     `bson:"_id"`
-	Username string `bson:"username"`
-	Password string `bson:"password"`
+	Id       ID     `json:"id" bson:"_id"`
+	Username string `json:"username" bson:"username"`
+	Password string `json:"password" bson:"password"`
 }
 
 func (u *User) NoId() bson.M {
