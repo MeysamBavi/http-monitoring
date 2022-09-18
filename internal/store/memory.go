@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/MeysamBavi/http-monitoring/internal/model"
@@ -36,15 +37,18 @@ func (s *InMemoryStore) Alert() Alert {
 	return s.alert
 }
 
-type InMemoryUser struct {
-	nextId    model.ID
-	data      map[model.ID]*model.User
-	usernames map[string]model.ID
+type idGen int
+
+func (ign *idGen) newId() model.ID {
+	(*ign)++
+	r, _ := model.ParseId(fmt.Sprint((*ign)))
+	return r
 }
 
-func (u *InMemoryUser) newId() model.ID {
-	u.nextId++
-	return u.nextId
+type InMemoryUser struct {
+	idGen
+	data      map[model.ID]*model.User
+	usernames map[string]model.ID
 }
 
 func (u *InMemoryUser) Get(_ context.Context, id model.ID) (*model.User, error) {
@@ -79,13 +83,8 @@ func (u *InMemoryUser) Add(_ context.Context, user *model.User) error {
 }
 
 type InMemoryUrl struct {
-	nextId model.ID
-	data   map[model.ID][]*model.URL // user id -> urls
-}
-
-func (u *InMemoryUrl) newId() model.ID {
-	u.nextId++
-	return u.nextId
+	idGen
+	data map[model.ID][]*model.URL // user id -> urls
 }
 
 func (u *InMemoryUrl) GetByUserId(_ context.Context, id model.ID) ([]*model.URL, error) {
@@ -169,32 +168,32 @@ func (u *InMemoryUrl) ForAll(_ context.Context, callBack func(model.URL)) error 
 }
 
 // for test only
-func (u *InMemoryUrl) ListenForChanges(_ context.Context, out chan<- UrlChangeEvent) error {
-	i := model.ID(1)
-	for {
-		time.Sleep(10 * time.Second)
-		out <- UrlChangeEvent{
-			Url: model.URL{
-				Id:        i,
-				UserId:    i,
-				Url:       "https://httpbin.org/status/206",
-				Threshold: 20,
-				Interval:  model.Interval{Duration: 30 * time.Second},
-			},
-			Operation: UrlChangeOperationInsert,
+func (u *InMemoryUrl) ListenForChanges(_ context.Context) (<-chan UrlChangeEvent, error) {
+	out := make(chan UrlChangeEvent, 100)
+
+	go func() {
+		i, _ := model.ParseId("1")
+		for {
+			time.Sleep(10 * time.Second)
+			out <- UrlChangeEvent{
+				Url: model.URL{
+					Id:        i,
+					UserId:    i,
+					Url:       "https://httpbin.org/status/206",
+					Threshold: 20,
+					Interval:  model.Interval{Duration: 30 * time.Second},
+				},
+				Operation: UrlChangeOperationInsert,
+			}
 		}
-		i++
-	}
+	}()
+
+	return out, nil
 }
 
 type InMemoryAlert struct {
-	nextId model.ID
-	data   map[model.ID][]*model.Alert // url id -> alerts
-}
-
-func (a *InMemoryAlert) newId() model.ID {
-	a.nextId++
-	return a.nextId
+	idGen
+	data map[model.ID][]*model.Alert // url id -> alerts
 }
 
 func (a *InMemoryAlert) GetByUrlId(_ context.Context, urlId model.ID) ([]*model.Alert, error) {

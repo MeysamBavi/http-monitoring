@@ -4,6 +4,7 @@ import (
 	"github.com/MeysamBavi/http-monitoring/internal/api"
 	"github.com/MeysamBavi/http-monitoring/internal/auth"
 	"github.com/MeysamBavi/http-monitoring/internal/config"
+	"github.com/MeysamBavi/http-monitoring/internal/db"
 	"github.com/MeysamBavi/http-monitoring/internal/store"
 	"github.com/labstack/echo/v4"
 	"github.com/spf13/cobra"
@@ -14,9 +15,20 @@ func main(cfg *config.Config, logger *zap.Logger) {
 	app := echo.New()
 
 	var s store.Store
-	{
-		logger := logger.Named("store")
-		s = store.NewInMemoryStore(logger.Named("memory"))
+	if !cfg.InMemory {
+		db, err := db.New(cfg.Database)
+		if err != nil {
+			logger.Fatal("cannot create a db instance", zap.Error(err))
+		}
+		logger.Info("connected to mongo db", zap.String("name", db.Name()))
+
+		s = store.NewMongodbStore(
+			db,
+			cfg.Database,
+			logger.Named("mongo"),
+		)
+	} else {
+		s = store.NewInMemoryStore(logger.Named("in-memory"))
 	}
 
 	var jh *auth.JwtHandler

@@ -1,14 +1,22 @@
 package model
 
-import "strconv"
+import "go.mongodb.org/mongo-driver/bson/primitive"
 
-type ID uint64
+type ID string
 
 func (id ID) String() string {
-	return strconv.FormatUint(uint64(id), 10)
+	return string(id)
 }
 
 func ParseId(str string) (ID, error) {
-	id, err := strconv.ParseUint(str, 10, 64)
-	return ID(id), err
+	return ID(str), nil
+}
+
+func ParseIdFromObjectId(oid primitive.ObjectID) ID {
+	return ID(oid.Hex())
+}
+
+func (id ID) ObjectId() primitive.ObjectID {
+	oid, _ := primitive.ObjectIDFromHex(id.String())
+	return oid
 }

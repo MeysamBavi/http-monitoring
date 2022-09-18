@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/MeysamBavi/http-monitoring/internal/cmd/migrate"
 	"github.com/MeysamBavi/http-monitoring/internal/cmd/monitor"
 	"github.com/MeysamBavi/http-monitoring/internal/cmd/serve"
 	"github.com/MeysamBavi/http-monitoring/internal/config"
@@ -37,6 +38,7 @@ func Execute() {
 
 	root.AddCommand(serve.New(cfg, logger))
 	root.AddCommand(monitor.New(cfg, logger))
+	root.AddCommand(migrate.New(cfg, logger))
 
 	if err := root.Execute(); err != nil {
 		logger.Error("failed to execute root command", zap.Error(err))
