@@ -2,13 +2,13 @@ package store
 
 import (
 	"context"
+	"time"
 
 	"github.com/MeysamBavi/http-monitoring/internal/model"
 )
 
 type Url interface {
-	// blocks
-	ListenForChanges(context.Context, chan<- UrlChangeEvent) error
+	ListenForChanges(context.Context) (<-chan UrlChangeEvent, error)
 	ForAll(context.Context, func(model.URL)) error
 	GetByUserId(context.Context, model.ID) ([]*model.URL, error)
 	GetDayStat(ctx context.Context, userId model.ID, id model.ID, date model.Date) (model.DayStat, error)
@@ -19,6 +19,7 @@ type Url interface {
 type UrlChangeEvent struct {
 	Url       model.URL `bson:"fullDocument"`
 	Operation string    `bson:"operationType"`
+	Timestamp time.Time `bson:"timestamp"`
 }
 
 const (

@@ -168,21 +168,27 @@ func (u *InMemoryUrl) ForAll(_ context.Context, callBack func(model.URL)) error 
 }
 
 // for test only
-func (u *InMemoryUrl) ListenForChanges(_ context.Context, out chan<- UrlChangeEvent) error {
-	i, _ := model.ParseId("1")
-	for {
-		time.Sleep(10 * time.Second)
-		out <- UrlChangeEvent{
-			Url: model.URL{
-				Id:        i,
-				UserId:    i,
-				Url:       "https://httpbin.org/status/206",
-				Threshold: 20,
-				Interval:  model.Interval{Duration: 30 * time.Second},
-			},
-			Operation: UrlChangeOperationInsert,
+func (u *InMemoryUrl) ListenForChanges(_ context.Context) (<-chan UrlChangeEvent, error) {
+	out := make(chan UrlChangeEvent, 100)
+
+	go func() {
+		i, _ := model.ParseId("1")
+		for {
+			time.Sleep(10 * time.Second)
+			out <- UrlChangeEvent{
+				Url: model.URL{
+					Id:        i,
+					UserId:    i,
+					Url:       "https://httpbin.org/status/206",
+					Threshold: 20,
+					Interval:  model.Interval{Duration: 30 * time.Second},
+				},
+				Operation: UrlChangeOperationInsert,
+			}
 		}
-	}
+	}()
+
+	return out, nil
 }
 
 type InMemoryAlert struct {

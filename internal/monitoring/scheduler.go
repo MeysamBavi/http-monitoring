@@ -77,6 +77,8 @@ func (s *Scheduler) startWorkers(scope *scope) {
 
 func (s *Scheduler) startModules(scope *scope) {
 	scope.syncHeap = s.initializeHeap()
+	s.logger.Info("starting modules")
+
 	go s.schedule(scope.syncHeap, scope.in, scope.scheduleShutdown)
 	go s.update(scope.syncHeap, scope.updateShutdown, scope.updateDone)
 	go s.collect(scope.out, scope.collectDone)
@@ -102,6 +104,8 @@ func (s *Scheduler) waitForShutdown(scope *scope) {
 }
 
 func (s *Scheduler) initializeHeap() *util.SyncHeap[*TimedURL] {
+
+	s.logger.Info("initializing urls heap")
 
 	all := make([]*TimedURL, 0)
 	err := s.dataStore.Url().ForAll(context.Background(), func(u model.URL) {
@@ -160,15 +164,21 @@ func (s *Scheduler) schedule(syncedHeap *util.SyncHeap[*TimedURL], in chan<- *Ta
 func (s *Scheduler) update(syncHeap *util.SyncHeap[*TimedURL], shutdown <-chan int, done chan<- int) {
 	logger := s.logger.Named("update")
 
-	events := make(chan store.UrlChangeEvent, 100)
-	go s.dataStore.Url().ListenForChanges(context.Background(), events)
+	events, err := s.dataStore.Url().ListenForChanges(context.Background())
+	if err != nil {
+		logger.Fatal("error listening for changes", zap.Error(err))
+	}
 
 	for {
 		select {
 		case <-shutdown:
 			done <- 0
 			return
-		case event := <-events:
+		case event, ok := <-events:
+			if !ok {
+				logger.Fatal("url events channel was closed unexpectedly")
+			}
+			logger.Debug("received event", zap.Any("event", event))
 			if event.Operation == store.UrlChangeOperationInsert {
 				logger.Debug("updating heap", zap.Any("event", event))
 				syncHeap.Push(NewTimedURL(
