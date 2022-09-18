@@ -203,13 +203,12 @@ func (m *MongodbUrl) GetDayStat(ctx context.Context, userId model.ID, id model.I
 		return model.DayStat{}, fmt.Errorf("could not decode result into url: %w", err)
 	}
 
-	for _, stat := range url.DayStats {
-		if stat.Date == date {
-			return *stat, nil
-		}
+	stat := findStat(url.DayStats, date)
+	if stat == nil {
+		return model.DayStat{}, NewNotFoundError("dayStat", "date", date)
 	}
 
-	return model.DayStat{}, NewNotFoundError("dayStat", "date", date)
+	return *stat, nil
 }
 
 func (m *MongodbUrl) ListenForChanges(ctx context.Context) (<-chan UrlChangeEvent, error) {
@@ -281,37 +280,13 @@ func (m *MongodbUrl) UpdateStat(ctx context.Context, userId model.ID, id model.I
 	)
 
 	if r.Err() != nil {
+		// unexpected error
 		if r.Err() != mongo.ErrNoDocuments {
 			return nil, model.DayStat{}, fmt.Errorf("error updating url stat: %w", r.Err())
 		}
 
 		// no stat found, create a new one
-		r = m.coll.FindOneAndUpdate(
-			ctx,
-			bson.M{
-				"_id":     id.ObjectId(),
-				"user_id": userId,
-			},
-			bson.M{
-				"$push": bson.M{
-					"day_stats": stat,
-				},
-			},
-		)
-
-		if r.Err() != nil {
-			if r.Err() == mongo.ErrNoDocuments {
-				return nil, model.DayStat{}, NotFoundError("found no url matching the parameters")
-			}
-			return nil, model.DayStat{}, fmt.Errorf("error updating url stat: %w", r.Err())
-		}
-
-		var url model.URL
-		if err := r.Decode(&url); err != nil {
-			return nil, model.DayStat{}, fmt.Errorf("could not decode result into url: %w", err)
-		}
-
-		return &url, stat, nil
+		return m.appendStat(ctx, id, userId, stat)
 	}
 
 	var url model.URL
@@ -319,13 +294,41 @@ func (m *MongodbUrl) UpdateStat(ctx context.Context, userId model.ID, id model.I
 		return nil, model.DayStat{}, fmt.Errorf("could not decode result into url: %w", err)
 	}
 
-	for _, s := range url.DayStats {
-		if s.Date == stat.Date {
-			return &url, *s, nil
-		}
+	updatedStat := findStat(url.DayStats, stat.Date)
+	if updatedStat == nil {
+		return nil, model.DayStat{}, errors.New("could not find updated stat")
 	}
 
-	return nil, model.DayStat{}, errors.New("could not find updated stat")
+	return &url, *updatedStat, nil
+}
+
+func (m *MongodbUrl) appendStat(ctx context.Context, id model.ID, userId model.ID, stat model.DayStat) (*model.URL, model.DayStat, error) {
+	r := m.coll.FindOneAndUpdate(
+		ctx,
+		bson.M{
+			"_id":     id.ObjectId(),
+			"user_id": userId,
+		},
+		bson.M{
+			"$push": bson.M{
+				"day_stats": stat,
+			},
+		},
+	)
+
+	if r.Err() != nil {
+		if r.Err() == mongo.ErrNoDocuments {
+			return nil, model.DayStat{}, NotFoundError("found no url matching the parameters")
+		}
+		return nil, model.DayStat{}, fmt.Errorf("error updating url stat: %w", r.Err())
+	}
+
+	var url model.URL
+	if err := r.Decode(&url); err != nil {
+		return nil, model.DayStat{}, fmt.Errorf("could not decode result into url: %w", err)
+	}
+
+	return &url, stat, nil
 }
 
 type MongodbAlert struct {
@@ -361,4 +364,14 @@ func (m *MongodbAlert) GetByUrlId(ctx context.Context, id model.ID) ([]*model.Al
 	}
 
 	return all, nil
+}
+
+func findStat(stats []*model.DayStat, date model.Date) *model.DayStat {
+	for _, stat := range stats {
+		if stat.Date == date {
+			return stat
+		}
+	}
+
+	return nil
 }
