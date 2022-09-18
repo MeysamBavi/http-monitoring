@@ -33,5 +33,6 @@ func NewTimedURL(UrlId model.ID, URL string, UserId model.ID, Interval time.Dura
 		URL:      URL,
 		UserId:   UserId,
 		Interval: Interval,
+		callTime: time.Now().Add(Interval), // for preventing starting the first call immediately
 	}
 }
