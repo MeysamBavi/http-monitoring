@@ -16,20 +16,22 @@ import (
 func main(cfg *config.Config, logger *zap.Logger) {
 	logger.Debug("starting the monitoring service")
 
-	db, err := db.New(cfg.Database)
-	if err != nil {
-		logger.Fatal("cannot create a db instance", zap.Error(err))
-	}
-	logger.Info("connected to mongo db", zap.Any("name", db.Name()))
+	var s store.Store
+	if !cfg.InMemory {
+		db, err := db.New(cfg.Database)
+		if err != nil {
+			logger.Fatal("cannot create a db instance", zap.Error(err))
+		}
+		logger.Info("connected to mongo db", zap.String("name", db.Name()))
 
-	s := store.NewMongodbStore(
-		logger.Named("mongo"),
-		db,
-		db.Collection(cfg.Database.UserCollection),
-		db.Collection(cfg.Database.UrlCollection),
-		db.Collection(cfg.Database.AlertCollection),
-		db.Collection(cfg.Database.UrlEventCollection),
-	)
+		s = store.NewMongodbStore(
+			db,
+			cfg.Database,
+			logger.Named("mongo"),
+		)
+	} else {
+		s = store.NewInMemoryStore(logger.Named("in-memory"))
+	}
 
 	scheduler := monitoring.NewScheduler(
 		logger.Named("scheduler"),

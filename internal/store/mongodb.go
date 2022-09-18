@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/MeysamBavi/http-monitoring/internal/db"
 	"github.com/MeysamBavi/http-monitoring/internal/model"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -22,13 +23,13 @@ type MongodbStore struct {
 	alert  *MongodbAlert
 }
 
-func NewMongodbStore(logger *zap.Logger, db *mongo.Database, user, url, alert, url_events *mongo.Collection) Store {
+func NewMongodbStore(db *mongo.Database, cfg db.Config, logger *zap.Logger) Store {
 	return &MongodbStore{
 		db:     db,
 		logger: logger,
-		user:   &MongodbUser{user},
-		url:    &MongodbUrl{url, url_events, logger.Named("url")},
-		alert:  &MongodbAlert{alert},
+		user:   &MongodbUser{db.Collection(cfg.UserCollection)},
+		url:    &MongodbUrl{coll: db.Collection(cfg.UrlCollection), events: db.Collection(cfg.UrlEventCollection), logger: logger.Named("url")},
+		alert:  &MongodbAlert{db.Collection(cfg.AlertCollection)},
 	}
 }
 

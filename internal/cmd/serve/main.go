@@ -15,8 +15,7 @@ func main(cfg *config.Config, logger *zap.Logger) {
 	app := echo.New()
 
 	var s store.Store
-	{
-		logger := logger.Named("store")
+	if !cfg.InMemory {
 		db, err := db.New(cfg.Database)
 		if err != nil {
 			logger.Fatal("cannot create a db instance", zap.Error(err))
@@ -24,13 +23,12 @@ func main(cfg *config.Config, logger *zap.Logger) {
 		logger.Info("connected to mongo db", zap.String("name", db.Name()))
 
 		s = store.NewMongodbStore(
-			logger.Named("mongo"),
 			db,
-			db.Collection(cfg.Database.UserCollection),
-			db.Collection(cfg.Database.UrlCollection),
-			db.Collection(cfg.Database.AlertCollection),
-			db.Collection(cfg.Database.UrlEventCollection),
+			cfg.Database,
+			logger.Named("mongo"),
 		)
+	} else {
+		s = store.NewInMemoryStore(logger.Named("in-memory"))
 	}
 
 	var jh *auth.JwtHandler

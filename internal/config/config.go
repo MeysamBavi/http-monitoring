@@ -11,6 +11,7 @@ import (
 
 type Config struct {
 	Debug      bool              `config:"debug"`
+	InMemory   bool              `config:"in_memory"`
 	Listen     string            `config:"listen"`
 	Monitoring monitoring.Config `config:"monitoring"`
 	Auth       auth.Config       `config:"auth"`
@@ -19,8 +20,9 @@ type Config struct {
 
 func Default() Config {
 	return Config{
-		Debug:  true,
-		Listen: ":1234",
+		Debug:    true,
+		Listen:   ":1234",
+		InMemory: false,
 		Monitoring: monitoring.Config{
 			RequestTimeout:  10 * time.Second,
 			NumberOfWorkers: runtime.NumCPU(),
@@ -32,11 +34,11 @@ func Default() Config {
 		Database: db.Config{
 			URI:                "mongodb://127.0.0.1:27017",
 			DbName:             "httpm",
-			ConnectionTimeout:  2 * time.Second,
 			UserCollection:     "user",
 			UrlCollection:      "url",
 			AlertCollection:    "alert",
 			UrlEventCollection: "url_event",
+			ConnectionTimeout:  2 * time.Second,
 		},
 	}
 }
