@@ -29,6 +29,7 @@ func main(cfg *config.Config, logger *zap.Logger) {
 			db.Collection(cfg.Database.UserCollection),
 			db.Collection(cfg.Database.UrlCollection),
 			db.Collection(cfg.Database.AlertCollection),
+			db.Collection(cfg.Database.UrlEventCollection),
 		)
 	}
 
