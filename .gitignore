@@ -16,3 +16,6 @@
 
 # VS Code settings
 .vscode/
+
+# idea
+.idea/
