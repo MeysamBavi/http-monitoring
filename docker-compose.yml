@@ -12,8 +12,8 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - HTTPM_LISTEN=3000
-      - HTTPM_DATABASE__URI=mongodb://localhost:27017
+      - HTTPM_LISTEN=:3000
+      - HTTPM_DATABASE__URI=mongodb://database:27017
 
   monitor:
     image: "httpm"
@@ -23,7 +23,7 @@ services:
       - database
     command: "monitor"
     environment:
-      - HTTPM_DATABASE__URI=mongodb://localhost:27017
+      - HTTPM_DATABASE__URI=mongodb://database:27017
 
   database:
     image: "mongo:6.0.1"

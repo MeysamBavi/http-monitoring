@@ -1,25 +1,23 @@
 ## Build
-FROM golang:latest AS build
+FROM golang:1.19 AS build
 
-ENV GOPATH=/app
-WORKDIR /app/src/http-montoring
+WORKDIR /app
 
 COPY go.mod ./
 COPY go.sum ./
 
 RUN go mod download
 
-COPY ./internal/* ./internal/
-COPY main.go ./
+COPY . ./
 
-RUN go build -o ./httpm
+RUN CGO_ENABLED=0 go build -o ./httpm
 
 ## Deploy
-FROM gcr.io/distroless/base-debian10
+FROM gcr.io/distroless/base-debian11
 
-WORKDIR /
+WORKDIR /app
 
-COPY --from=build /app/src/http-montoring/httpm /
-COPY ./config.json /
+COPY --from=build /app/httpm .
+COPY ./config.json .
 
-ENTRYPOINT ["/httpm"]
+ENTRYPOINT ["./httpm"]
