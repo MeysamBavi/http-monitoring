@@ -14,11 +14,14 @@ import (
 )
 
 func main(cfg *config.Config, logger *zap.Logger) {
-	db, err := db.New(cfg.Database)
+	database, err := db.New(cfg.Database)
 	if err != nil {
 		logger.Fatal("cannot create a db instance", zap.Error(err))
 	}
+	Migrate(cfg, logger, database)
+}
 
+func Migrate(cfg *config.Config, logger *zap.Logger, db *mongo.Database) {
 	{
 		err := db.CreateCollection(
 			context.Background(),

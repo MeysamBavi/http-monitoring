@@ -1,0 +1,36 @@
+---
+version: "3.9"
+
+services:
+  serve:
+    image: "httpm"
+    build:
+      context: ./
+    depends_on:
+      - monitor
+    command: "serve"
+    ports:
+      - "3000:3000"
+    environment:
+      - HTTPM_LISTEN=:3000
+      - HTTPM_DATABASE__URI=mongodb://database:27017
+
+  monitor:
+    image: "httpm"
+    build:
+      context: ./
+    depends_on:
+      - database
+    command: "monitor --migrate-first"
+    environment:
+      - HTTPM_DATABASE__URI=mongodb://database:27017
+
+  database:
+    image: "mongo:6.0.1"
+    ports:
+      - "27017:27017"
+    volumes:
+      - "httpm-data:/data/db"
+
+volumes:
+    httpm-data:
