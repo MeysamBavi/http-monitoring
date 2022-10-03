@@ -29,3 +29,8 @@ services:
     image: "mongo:6.0.1"
     ports:
       - "27017:27017"
+    volumes:
+      - "httpm-data:/data/db"
+
+volumes:
+    httpm-data:
