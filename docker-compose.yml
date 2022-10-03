@@ -7,7 +7,7 @@ services:
     build:
       context: ./
     depends_on:
-      - database
+      - monitor
     command: "serve"
     ports:
       - "3000:3000"
@@ -21,7 +21,7 @@ services:
       context: ./
     depends_on:
       - database
-    command: "monitor"
+    command: "monitor --migrate-first"
     environment:
       - HTTPM_DATABASE__URI=mongodb://database:27017
 
