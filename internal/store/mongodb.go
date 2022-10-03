@@ -221,7 +221,9 @@ func (m *MongodbUrl) ListenForChanges(ctx context.Context) (<-chan UrlChangeEven
 	}
 
 	if count == 0 {
-		m.logger.Fatal("events collection cannot be empty for startup", zap.Int64("count", count))
+		if _, err := m.events.InsertOne(ctx, UrlChangeEvent{}); err != nil {
+			return nil, fmt.Errorf("could not insert initial event: %w", err)
+		}
 	}
 
 	cursor, err := m.events.Find(ctx, bson.D{}, options.Find().SetCursorType(options.Tailable).SetNoCursorTimeout(true))
