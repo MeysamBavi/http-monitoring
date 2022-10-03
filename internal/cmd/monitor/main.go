@@ -1,6 +1,7 @@
 package monitor
 
 import (
+	"github.com/MeysamBavi/http-monitoring/internal/cmd/migrate"
 	"os"
 	"os/signal"
 	"syscall"
@@ -13,19 +14,29 @@ import (
 	"go.uber.org/zap"
 )
 
-func main(cfg *config.Config, logger *zap.Logger) {
+const (
+	migrateFirstFlagName = "migrate-first"
+)
+
+func main(cfg *config.Config, logger *zap.Logger, migrateFirst bool) {
+
 	logger.Debug("starting the monitoring service")
 
 	var s store.Store
 	if !cfg.InMemory {
-		db, err := db.New(cfg.Database)
+		database, err := db.New(cfg.Database)
 		if err != nil {
-			logger.Fatal("cannot create a db instance", zap.Error(err))
+			logger.Fatal("cannot create a database instance", zap.Error(err))
 		}
-		logger.Info("connected to mongo db", zap.String("name", db.Name()))
+		logger.Info("connected to mongo database", zap.String("name", database.Name()))
+
+		if migrateFirst {
+			logger.Info("migrating database")
+			migrate.Migrate(cfg, logger, database)
+		}
 
 		s = store.NewMongodbStore(
-			db,
+			database,
 			cfg.Database,
 			logger.Named("mongo"),
 		)
@@ -40,17 +51,28 @@ func main(cfg *config.Config, logger *zap.Logger) {
 		s,
 	)
 
+	logger.Info("running scheduler")
+
 	shutdown := make(chan os.Signal, 1)
 	signal.Notify(shutdown, syscall.SIGTERM, syscall.SIGINT)
 	scheduler.Run(shutdown)
 }
 
 func New(cfg *config.Config, logger *zap.Logger) *cobra.Command {
-	return &cobra.Command{
+	migrateFirst := false
+	command := &cobra.Command{
 		Use:   "monitor",
 		Short: "Starts the monitoring module for stored urls",
 		Run: func(cmd *cobra.Command, args []string) {
-			main(cfg, logger)
+			main(cfg, logger, migrateFirst)
 		},
 	}
+	command.Flags().BoolVarP(
+		&migrateFirst,
+		migrateFirstFlagName,
+		"m",
+		false,
+		"Perform database migration before starting to monitor",
+	)
+	return command
 }
