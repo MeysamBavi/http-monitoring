@@ -182,7 +182,7 @@ func (m *MongodbUrl) GetByUserId(ctx context.Context, id model.ID) ([]*model.URL
 	return all, nil
 }
 
-func (m *MongodbUrl) GetDayStat(ctx context.Context, userId model.ID, id model.ID, date model.Date) (model.DayStat, error) {
+func (m *MongodbUrl) GetDayStats(ctx context.Context, userId model.ID, id model.ID, dateFilter func(model.Date) bool) ([]model.DayStat, error) {
 	r := m.coll.FindOne(
 		ctx,
 		bson.M{
@@ -193,23 +193,23 @@ func (m *MongodbUrl) GetDayStat(ctx context.Context, userId model.ID, id model.I
 
 	if r.Err() != nil {
 		if r.Err() == mongo.ErrNoDocuments {
-			return model.DayStat{}, NotFoundError("found no url matching the parameters")
+			return nil, NotFoundError("found no url matching the parameters")
 		}
 
-		return model.DayStat{}, fmt.Errorf("error getting url: %w", r.Err())
+		return nil, fmt.Errorf("error getting url: %w", r.Err())
 	}
 
 	var url model.URL
 	if err := r.Decode(&url); err != nil {
-		return model.DayStat{}, fmt.Errorf("could not decode result into url: %w", err)
+		return nil, fmt.Errorf("could not decode result into url: %w", err)
 	}
 
-	stat := findStat(url.DayStats, date)
-	if stat == nil {
-		return model.DayStat{}, NewNotFoundError("dayStat", "date", date)
+	if url.DayStats == nil {
+		return nil, NewNotFoundErrorM(fmt.Sprintf("url with id %v has no day stats", id))
 	}
 
-	return *stat, nil
+	stats := filterStats(url.DayStats, dateFilter)
+	return stats, nil
 }
 
 func (m *MongodbUrl) ListenForChanges(ctx context.Context) (<-chan UrlChangeEvent, error) {
@@ -377,4 +377,14 @@ func findStat(stats []*model.DayStat, date model.Date) *model.DayStat {
 	}
 
 	return nil
+}
+
+func filterStats(stats []*model.DayStat, pick func(model.Date) bool) []model.DayStat {
+	filtered := make([]model.DayStat, 0, len(stats)/2)
+	for _, stat := range stats {
+		if pick(stat.Date) {
+			filtered = append(filtered, *stat)
+		}
+	}
+	return filtered
 }

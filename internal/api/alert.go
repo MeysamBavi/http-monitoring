@@ -20,16 +20,16 @@ type AlertHandler struct {
 
 func (h *AlertHandler) Register(group *echo.Group) {
 	group.Use(middleware.JWTWithConfig(h.JwtHandler.Config()))
-	group.GET("/get", h.get)
+	group.GET("/:id", h.get)
 }
 
 func (h *AlertHandler) get(c echo.Context) error {
 	claims := h.JwtHandler.ParseToUserClaims(c)
 
-	urlId, err := model.ParseId(c.QueryParam("id"))
+	urlId, err := model.ParseId(c.Param("id"))
 	if err != nil {
 		h.Logger.Error("error parsing url id", zap.Error(err))
-		return echo.NewHTTPError(http.StatusBadRequest, "could not parse url id from query parameter")
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid url id")
 	}
 
 	ctx := c.Request().Context()
