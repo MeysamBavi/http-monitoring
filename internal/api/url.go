@@ -10,8 +10,6 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"go.uber.org/zap"
 	"net/http"
-	"net/url"
-	"strconv"
 )
 
 type UrlHandler struct {
@@ -34,11 +32,10 @@ func (h *UrlHandler) create(c echo.Context) error {
 
 	if err := c.Bind(&req); err != nil {
 		h.Logger.Error("error binding request", zap.Error(err))
-		return echo.NewHTTPError(http.StatusBadRequest, "could not parse request")
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
 	if err := req.Validate(); err != nil {
-		h.Logger.Error("validation error", zap.Error(err))
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
@@ -89,21 +86,18 @@ func (h *UrlHandler) getAll(c echo.Context) error {
 func (h *UrlHandler) getDayStats(c echo.Context) error {
 	claims := h.JwtHandler.ParseToUserClaims(c)
 
-	urlId, err := model.ParseId(c.Param("id"))
-	if err != nil {
-		h.Logger.Error("error parsing url id", zap.Error(err))
-		return echo.NewHTTPError(http.StatusBadRequest, "invalid url id")
+	var dayStats request.DayStats
+	if err := c.Bind(&dayStats); err != nil {
+		h.Logger.Error("error binding the request", zap.Error(err))
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	dateFilter, err := generateDayFilter(c.QueryParams())
-
-	if err != nil {
-		h.Logger.Error("error parsing date", zap.Error(err))
-		return echo.NewHTTPError(http.StatusBadRequest, "invalid query params")
+	if err := dayStats.Validate(); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
 	ctx := c.Request().Context()
-	stats, err := h.UrlStore.GetDayStats(ctx, *claims.UserId, urlId, dateFilter)
+	stats, err := h.UrlStore.GetDayStats(ctx, *claims.UserId, dayStats.ParseUrlId(), dayStats.DayFilter())
 
 	if err != nil {
 		var notFound store.NotFoundError
@@ -112,52 +106,9 @@ func (h *UrlHandler) getDayStats(c echo.Context) error {
 			return echo.NewHTTPError(http.StatusNotFound, "no stats found for url")
 		}
 
-		return echo.ErrBadGateway.Internal
+		h.Logger.Error("error getting day stats", zap.Error(err))
+		return echo.ErrInternalServerError
 	}
 
 	return c.JSON(http.StatusOK, stats)
-}
-
-func generateDayFilter(values url.Values) (func(date model.Date) bool, error) {
-	hasDay := values.Has("day")
-	hasMonth := values.Has("month")
-	hasYear := values.Has("year")
-
-	var day, month, year int
-	var err error
-	if hasDay {
-		day, err = strconv.Atoi(values.Get("day"))
-		if err != nil {
-			return nil, errors.New("invalid day")
-		}
-	}
-
-	if hasMonth {
-		month, err = strconv.Atoi(values.Get("month"))
-		if err != nil {
-			return nil, errors.New("invalid month")
-		}
-	}
-
-	if hasYear {
-		year, err = strconv.Atoi(values.Get("year"))
-		if err != nil {
-			return nil, errors.New("invalid year")
-		}
-	}
-
-	return func(date model.Date) bool {
-		if hasDay && date.Day != day {
-			return false
-		}
-
-		if hasMonth && date.Month != month {
-			return false
-		}
-
-		if hasYear && date.Year != year {
-			return false
-		}
-		return true
-	}, nil
 }
