@@ -219,7 +219,7 @@ func (s *Scheduler) collect(out <-chan *Result, done chan<- int) {
 			continue
 		}
 
-		// send alert if has passed failure threshold
+		// send alert if it has passed failure threshold
 		if stat.FailureCount > 0 && stat.FailureCount%url.Threshold == 0 {
 			err := s.dataStore.Alert().Add(context.Background(), &model.Alert{
 				UserId:   url.UserId,
