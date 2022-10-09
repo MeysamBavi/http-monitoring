@@ -7,7 +7,7 @@ import (
 )
 
 type Alert struct {
-	UrlId string `param:"id" path:"id"`
+	UrlId string `param:"id" path:"id" description:"url id" required:"true"`
 }
 
 func (a *Alert) Validate() error {

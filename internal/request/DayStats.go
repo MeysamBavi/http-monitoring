@@ -6,9 +6,9 @@ import (
 )
 
 type DayStats struct {
-	UrlId string `param:"id" path:"id"`
-	Day   *int   `query:"day"`
-	Month *int   `query:"month"`
+	UrlId string `param:"id" path:"id" description:"url id" required:"true"`
+	Day   *int   `query:"day" description:"day of the month (1-31)"`
+	Month *int   `query:"month" description:"month number (1-12)"`
 	Year  *int   `query:"year"`
 }
 

@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 	"os"
+	"path"
 )
 
 const (
@@ -14,6 +15,18 @@ const (
 
 func main(_ *config.Config, logger *zap.Logger, output string) {
 	logger.Debug("generating OpenAPI 3.0 specification")
+
+	if output == "" {
+		logger.Fatal("output file name is required")
+	}
+
+	if path.Ext(output) != ".yaml" && path.Ext(output) != ".yml" {
+		logger.Warn("output file name is not a valid yaml file")
+	}
+
+	if err := os.MkdirAll(path.Dir(output), os.ModePerm); err != nil {
+		logger.Fatal("failed to create output directory", zap.Error(err))
+	}
 
 	file, err := os.Create(output)
 	if err != nil {

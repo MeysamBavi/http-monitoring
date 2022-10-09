@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	securityName = "bearer_token"
+	securityName = "jwtBearerAuth"
 )
 
 type DocGenerator struct {
@@ -58,6 +58,7 @@ func (d *DocGenerator) specifySecurity() {
 				HTTPSecurityScheme: (&openapi3.HTTPSecurityScheme{}).
 					WithScheme("Bearer").
 					WithBearerFormat("JWT").
+					WithMapOfAnythingItem("type", "http").
 					WithDescription("JWT token for user authentication"),
 			},
 		},

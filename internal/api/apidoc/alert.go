@@ -10,13 +10,17 @@ import (
 
 const (
 	alertGroup = "/alerts"
+	alertTag   = "Alerts"
 )
 
 func (d *DocGenerator) specifyAlertsGetOperation() {
 	op := openapi3.Operation{}
 	op.
+		WithSecurity(map[string][]string{securityName: {}}).
 		WithSummary("Gets all alerts").
-		WithDescription("Gets all alerts")
+		WithDescription("Gets all alerts").
+		WithID("getAlerts").
+		WithTags(alertTag)
 
 	d.handleError(d.reflector.SetRequest(&op, new(request.Alert), http.MethodGet))
 	d.handleError(d.reflector.SetJSONResponse(&op, new([]model.Alert), http.StatusOK))

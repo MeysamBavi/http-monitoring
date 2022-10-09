@@ -10,13 +10,17 @@ import (
 
 const (
 	urlGroup = "/urls"
+	urlTag   = "Urls"
 )
 
 func (d *DocGenerator) specifyUrlsCreateOperation() {
 	op := openapi3.Operation{}
 	op.
+		WithSecurity(map[string][]string{securityName: {}}).
 		WithSummary("Creates a new url for user").
-		WithDescription("Creates a new url for user")
+		WithDescription("Creates a new url for user").
+		WithID("createUrl").
+		WithTags(urlTag)
 
 	d.handleError(d.reflector.SetRequest(&op, new(request.URL), http.MethodPost))
 	d.handleError(d.reflector.SetJSONResponse(&op, new(model.URL), http.StatusCreated))
@@ -29,8 +33,11 @@ func (d *DocGenerator) specifyUrlsCreateOperation() {
 func (d *DocGenerator) specifyUrlsGetAllOperation() {
 	op := openapi3.Operation{}
 	op.
+		WithSecurity(map[string][]string{securityName: {}}).
 		WithSummary("Returns all urls of user").
-		WithDescription("Returns all urls of user")
+		WithDescription("Returns all urls of user in a list").
+		WithID("getAllUrls").
+		WithTags(urlTag)
 
 	d.handleError(d.reflector.SetJSONResponse(&op, new([]model.URL), http.StatusOK))
 	d.handleError(d.reflector.SetJSONResponse(&op, echo.NewHTTPError(http.StatusUnauthorized), http.StatusUnauthorized))
@@ -42,8 +49,11 @@ func (d *DocGenerator) specifyUrlsGetAllOperation() {
 func (d *DocGenerator) specifyUrlsGetDayStatsOperation() {
 	op := openapi3.Operation{}
 	op.
-		WithSummary("Returns stats for a day").
-		WithDescription("Returns stats for a day")
+		WithSecurity(map[string][]string{securityName: {}}).
+		WithSummary("Returns url monitoring stats").
+		WithDescription("Returns monitoring stats for a specific url. Stats can be filtered using query parameters").
+		WithID("getDayStats").
+		WithTags(urlTag)
 
 	d.handleError(d.reflector.SetRequest(&op, new(request.DayStats), http.MethodGet))
 	d.handleError(d.reflector.SetJSONResponse(&op, new([]model.DayStat), http.StatusOK))
