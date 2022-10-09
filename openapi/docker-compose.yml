@@ -1,0 +1,17 @@
+---
+version: '3.9'
+
+services:
+  spec-gen:
+    image: "httpm"
+    build:
+      context: ../
+    command: "openapi -o /app/openapi/doc/httpm.yaml"
+    volumes:
+      - "./:/app/openapi"
+  markdown-gen:
+    image: openapitools/openapi-generator-cli
+    working_dir: "/local/out"
+    command: generate -i ./doc/httpm.yaml -g markdown -o ./doc/
+    volumes:
+      - "./:/local/out"
