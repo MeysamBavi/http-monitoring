@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"github.com/MeysamBavi/http-monitoring/internal/request"
 	"net/http"
 
 	"github.com/MeysamBavi/http-monitoring/internal/auth"
@@ -20,33 +21,40 @@ type AlertHandler struct {
 
 func (h *AlertHandler) Register(group *echo.Group) {
 	group.Use(middleware.JWTWithConfig(h.JwtHandler.Config()))
-	group.GET("/get", h.get)
+	group.GET("/:id", h.get)
 }
 
 func (h *AlertHandler) get(c echo.Context) error {
 	claims := h.JwtHandler.ParseToUserClaims(c)
 
-	urlId, err := model.ParseId(c.QueryParam("id"))
-	if err != nil {
-		h.Logger.Error("error parsing url id", zap.Error(err))
-		return echo.NewHTTPError(http.StatusBadRequest, "could not parse url id from query parameter")
+	var alert request.Alert
+	if err := c.Bind(&alert); err != nil {
+		h.Logger.Error("error binding request", zap.Error(err))
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	if err := alert.Validate(); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
 	ctx := c.Request().Context()
-	alerts, err := h.AlertStore.GetByUrlId(ctx, urlId)
+	alerts, err := h.AlertStore.GetByUrlId(ctx, alert.ParseUrlId())
 
 	if err != nil {
 		var notFound store.NotFoundError
 		if errors.As(err, &notFound) {
-			h.Logger.Error("url not found", zap.Error(err))
-			return echo.NewHTTPError(http.StatusNotFound, err.Error())
+			h.Logger.Error("url not found", zap.Error(notFound))
+			return echo.NewHTTPError(http.StatusNotFound, "url not found")
 		}
+
+		h.Logger.Error("error getting alert", zap.Error(err))
+		return echo.ErrInternalServerError
 	}
 
 	for i, a := range alerts {
 		if a.UserId != *claims.UserId {
 			if i > 0 {
-				h.Logger.Warn("alerts with different user ids exist for url", zap.Any("url_id", urlId))
+				h.Logger.Warn("alerts with different user ids exist for url", zap.Any("url_id", alert.UrlId))
 			}
 			return echo.NewHTTPError(http.StatusForbidden, "not allowed to access this url")
 		}

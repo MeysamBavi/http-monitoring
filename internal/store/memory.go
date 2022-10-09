@@ -40,8 +40,8 @@ func (s *InMemoryStore) Alert() Alert {
 type idGen int
 
 func (ign *idGen) newId() model.ID {
-	(*ign)++
-	r, _ := model.ParseId(fmt.Sprint((*ign)))
+	*ign++
+	r, _ := model.ParseId(fmt.Sprint(*ign))
 	return r
 }
 
@@ -101,11 +101,11 @@ func (u *InMemoryUrl) Add(_ context.Context, url *model.URL) error {
 	return nil
 }
 
-func (u *InMemoryUrl) GetDayStat(_ context.Context, userId model.ID, id model.ID, date model.Date) (model.DayStat, error) {
+func (u *InMemoryUrl) GetDayStats(_ context.Context, userId model.ID, id model.ID, dateFilter func(model.Date) bool) ([]model.DayStat, error) {
 
 	urls, ok := u.data[userId]
 	if !ok {
-		return model.DayStat{}, NewNotFoundError("url", "userId", userId)
+		return nil, NewNotFoundError("url", "userId", userId)
 	}
 
 	// find url among user urls
@@ -114,17 +114,22 @@ func (u *InMemoryUrl) GetDayStat(_ context.Context, userId model.ID, id model.ID
 			continue
 		}
 
-		// find day stat among url day stats
+		if url.DayStats == nil {
+			return nil, NewNotFoundErrorM(fmt.Sprintf("url with id %v has no day stats", id))
+		}
+
+		result := make([]model.DayStat, 0, len(url.DayStats))
+		// filter requested day stats among url day stats
 		for _, ds := range url.DayStats {
-			if ds.Date == date {
-				return *ds, nil
+			if dateFilter(ds.Date) {
+				result = append(result, *ds)
 			}
 		}
 
-		return model.DayStat{}, NewNotFoundError("stat", "date", date)
+		return result, nil
 	}
 
-	return model.DayStat{}, NewNotFoundError("url", "id", id)
+	return nil, NewNotFoundError("url", "id", id)
 }
 
 func (u *InMemoryUrl) UpdateStat(_ context.Context, userId model.ID, id model.ID, stat model.DayStat) (*model.URL, model.DayStat, error) {

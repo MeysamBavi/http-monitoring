@@ -1,0 +1,13 @@
+.openapi-generator-ignore
+Apis/AlertsApi.md
+Apis/UrlsApi.md
+Apis/UsersApi.md
+Models/ModelAlert.md
+Models/ModelDate.md
+Models/ModelDayStat.md
+Models/ModelURL.md
+Models/ModelUser.md
+Models/RequestURL.md
+Models/RequestUser.md
+Models/V4HTTPError.md
+README.md

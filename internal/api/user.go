@@ -19,7 +19,7 @@ type UserHandler struct {
 }
 
 func (h *UserHandler) Register(group *echo.Group) {
-	group.POST("/create", h.create)
+	group.POST("", h.create)
 	group.POST("/login", h.login)
 }
 
@@ -99,5 +99,5 @@ func (h *UserHandler) login(c echo.Context) error {
 		return echo.ErrInternalServerError
 	}
 
-	return c.JSON(http.StatusOK, token)
+	return c.String(http.StatusOK, token)
 }

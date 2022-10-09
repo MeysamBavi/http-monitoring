@@ -6,8 +6,8 @@ import (
 )
 
 type User struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
+	Username string `json:"username" required:"true"`
+	Password string `json:"password" required:"true"`
 }
 
 func (u *User) Validate() error {

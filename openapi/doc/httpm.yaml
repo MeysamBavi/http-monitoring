@@ -1,0 +1,334 @@
+openapi: 3.0.3
+info:
+  description: http-monitoring is a simple http monitoring service
+  title: http-monitoring
+  version: ""
+paths:
+  /alerts/{id}:
+    get:
+      description: Gets all alerts
+      operationId: getAlerts
+      parameters:
+      - description: url id
+        in: path
+        name: id
+        required: true
+        schema:
+          description: url id
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/ModelAlert'
+                type: array
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V4HTTPError'
+          description: Bad Request
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V4HTTPError'
+          description: Unauthorized
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V4HTTPError'
+          description: Forbidden
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V4HTTPError'
+          description: Not Found
+      security:
+      - jwtBearerAuth: []
+      summary: Gets all alerts
+      tags:
+      - Alerts
+  /urls:
+    get:
+      description: Returns all urls of user in a list
+      operationId: getAllUrls
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/ModelURL'
+                type: array
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V4HTTPError'
+          description: Unauthorized
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V4HTTPError'
+          description: Not Found
+      security:
+      - jwtBearerAuth: []
+      summary: Returns all urls of user
+      tags:
+      - Urls
+    post:
+      description: Creates a new url for user
+      operationId: createUrl
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestURL'
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelURL'
+          description: Created
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V4HTTPError'
+          description: Bad Request
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V4HTTPError'
+          description: Unauthorized
+      security:
+      - jwtBearerAuth: []
+      summary: Creates a new url for user
+      tags:
+      - Urls
+  /urls/{id}/stats:
+    get:
+      description: Returns monitoring stats for a specific url. Stats can be filtered
+        using query parameters
+      operationId: getDayStats
+      parameters:
+      - description: day of the month (1-31)
+        in: query
+        name: day
+        schema:
+          description: day of the month (1-31)
+          nullable: true
+          type: integer
+      - description: month number (1-12)
+        in: query
+        name: month
+        schema:
+          description: month number (1-12)
+          nullable: true
+          type: integer
+      - in: query
+        name: year
+        schema:
+          nullable: true
+          type: integer
+      - description: url id
+        in: path
+        name: id
+        required: true
+        schema:
+          description: url id
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/ModelDayStat'
+                type: array
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V4HTTPError'
+          description: Bad Request
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V4HTTPError'
+          description: Unauthorized
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V4HTTPError'
+          description: Not Found
+      security:
+      - jwtBearerAuth: []
+      summary: Returns url monitoring stats
+      tags:
+      - Urls
+  /users:
+    post:
+      description: Creates a new user with the given username and password
+      operationId: createUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestUser'
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelUser'
+          description: Created
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V4HTTPError'
+          description: Bad Request
+      summary: Creates a new user
+      tags:
+      - Users
+  /users/login:
+    post:
+      description: Authenticates user and generates JWT token
+      operationId: loginUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestUser'
+      responses:
+        "200":
+          content:
+            JWT token:
+              schema:
+                type: string
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V4HTTPError'
+          description: Bad Request
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V4HTTPError'
+          description: Unauthorized
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V4HTTPError'
+          description: Not Found
+      summary: Authenticates user and generates JWT token
+      tags:
+      - Users
+components:
+  schemas:
+    ModelAlert:
+      properties:
+        issued_at:
+          format: date-time
+          type: string
+        url:
+          type: string
+        url_id:
+          $ref: '#/components/schemas/ModelID'
+      type: object
+    ModelDate:
+      properties:
+        day:
+          type: integer
+        month:
+          type: integer
+        year:
+          type: integer
+      type: object
+    ModelDayStat:
+      properties:
+        date:
+          $ref: '#/components/schemas/ModelDate'
+        failure_count:
+          type: integer
+        success_count:
+          type: integer
+      type: object
+    ModelID:
+      type: string
+    ModelInterval:
+      type: object
+    ModelURL:
+      properties:
+        id:
+          $ref: '#/components/schemas/ModelID'
+        interval:
+          $ref: '#/components/schemas/ModelInterval'
+        threshold:
+          type: integer
+        url:
+          type: string
+      type: object
+    ModelUser:
+      properties:
+        id:
+          $ref: '#/components/schemas/ModelID'
+        password:
+          type: string
+        username:
+          type: string
+      type: object
+    RequestURL:
+      properties:
+        interval:
+          $ref: '#/components/schemas/ModelInterval'
+        threshold:
+          description: failure threshold
+          type: integer
+        url:
+          description: url to monitor
+          type: string
+      required:
+      - url
+      - threshold
+      - interval
+      type: object
+    RequestUser:
+      properties:
+        password:
+          type: string
+        username:
+          type: string
+      required:
+      - username
+      - password
+      type: object
+    V4HTTPError:
+      properties:
+        message:
+          type: string
+      type: object
+  securitySchemes:
+    jwtBearerAuth:
+      bearerFormat: JWT
+      description: JWT token for user authentication
+      scheme: Bearer
+      type: http

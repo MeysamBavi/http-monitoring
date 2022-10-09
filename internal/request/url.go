@@ -10,9 +10,9 @@ import (
 )
 
 type URL struct {
-	Url       string         `json:"url"`
-	Threshold int            `json:"threshold"`
-	Interval  model.Interval `json:"interval"`
+	Url       string         `json:"url" description:"url to monitor" required:"true"`
+	Threshold int            `json:"threshold" description:"failure threshold" required:"true"`
+	Interval  model.Interval `json:"interval" description:"interval between checks" required:"true" type:"string" example:"5m40s"`
 }
 
 func (url *URL) Validate() error {
