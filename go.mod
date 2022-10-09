@@ -7,6 +7,7 @@ require (
 	github.com/knadh/koanf v1.4.3
 	github.com/labstack/echo/v4 v4.9.0
 	github.com/spf13/cobra v1.5.0
+	github.com/swaggest/openapi-go v0.2.22
 	go.mongodb.org/mongo-driver v1.10.2
 	go.uber.org/zap v1.23.0
 )
@@ -24,6 +25,8 @@ require (
 	github.com/montanaflynn/stats v0.6.6 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
+	github.com/swaggest/jsonschema-go v0.3.40 // indirect
+	github.com/swaggest/refl v1.1.0 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/scram v1.1.1 // indirect
 	github.com/xdg-go/stringprep v1.0.3 // indirect
@@ -32,6 +35,7 @@ require (
 	go.uber.org/multierr v1.8.0 // indirect
 	golang.org/x/sync v0.0.0-20220907140024-f12130a52804 // indirect
 	golang.org/x/time v0.0.0-20220722155302-e5dcc9cfc0b9 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
 require (
