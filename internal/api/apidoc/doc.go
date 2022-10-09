@@ -20,7 +20,7 @@ func NewDocGenerator(logger *zap.Logger) *DocGenerator {
 
 func newReflector() *openapi3.Reflector {
 	reflector := openapi3.Reflector{}
-	reflector.Spec = &openapi3.Spec{Openapi: "3.0"}
+	reflector.Spec = &openapi3.Spec{Openapi: "3.0.3"}
 	reflector.Spec.Info.
 		WithTitle("http-monitoring").
 		WithDescription("http-monitoring is a simple http monitoring service")
@@ -34,6 +34,14 @@ func (d *DocGenerator) OpenAPISpecAsYaml() ([]byte, error) {
 }
 
 func (d *DocGenerator) specifyOperations() {
+	d.specifyUsersCreateOperation()
+	d.specifyUsersLoginOperation()
+
+	d.specifyUrlsCreateOperation()
+	d.specifyUrlsGetAllOperation()
+	d.specifyUrlsGetDayStatsOperation()
+
+	d.specifyAlertsGetOperation()
 }
 
 func (d *DocGenerator) handleError(err error) {

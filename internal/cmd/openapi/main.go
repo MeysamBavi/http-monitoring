@@ -53,7 +53,7 @@ func New(cfg *config.Config, logger *zap.Logger) *cobra.Command {
 		&output,
 		outputFlagName,
 		"o",
-		"openapi.yaml",
+		"openapi/httpm.yaml",
 		"output file name",
 	)
 
