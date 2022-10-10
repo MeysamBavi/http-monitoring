@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"log"
 	"os"
 
@@ -15,7 +16,14 @@ import (
 
 func Execute() {
 	cfg := config.Load()
-	log.Println("config:", *cfg)
+
+	{
+		cfgJson, err := json.MarshalIndent(cfg, "", "  ")
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Println("config:", string(cfgJson))
+	}
 
 	var (
 		logger *zap.Logger
