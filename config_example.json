@@ -1,6 +1,6 @@
 {
   "debug": false,
-  "listen": "4321",
+  "http_port": "4321",
   "in_memory": true,
   "monitoring": {
     "number_of_workers": 11,

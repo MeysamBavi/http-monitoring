@@ -10,10 +10,9 @@ services:
       - monitor
     command: "serve"
     ports:
-      - "3000:3000"
-    environment:
-      - HTTPM_LISTEN=:3000
-      - HTTPM_DATABASE__URI=mongodb://database:27017
+      - "${HTTPM_HTTP_PORT}:${HTTPM_HTTP_PORT}"
+    env_file:
+      - .env
 
   monitor:
     image: "httpm"
@@ -22,15 +21,18 @@ services:
     depends_on:
       - database
     command: "monitor --migrate-first"
-    environment:
-      - HTTPM_DATABASE__URI=mongodb://database:27017
+    env_file:
+      - .env
+
 
   database:
     image: "mongo:6.0.1"
     ports:
-      - "27017:27017"
+      - "${HTTPM_DATABASE__PORT}:${HTTPM_DATABASE__PORT}"
     volumes:
       - "httpm-data:/data/db"
+    env_file:
+      - .env
 
 volumes:
     httpm-data:

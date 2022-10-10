@@ -12,7 +12,7 @@ import (
 type Config struct {
 	Debug      bool              `config:"debug"`
 	InMemory   bool              `config:"in_memory"`
-	Listen     string            `config:"listen"`
+	HttpPort   string            `config:"http_port"`
 	Monitoring monitoring.Config `config:"monitoring"`
 	Auth       auth.Config       `config:"auth"`
 	Database   db.Config         `config:"database"`
@@ -21,7 +21,7 @@ type Config struct {
 func Default() Config {
 	return Config{
 		Debug:    true,
-		Listen:   ":1234",
+		HttpPort: "1234",
 		InMemory: false,
 		Monitoring: monitoring.Config{
 			RequestTimeout:  10 * time.Second,
