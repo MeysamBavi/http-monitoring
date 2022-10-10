@@ -13,7 +13,7 @@ func main(cfg *config.Config, logger *zap.Logger) {
 
 	api.Setup(cfg, logger, app)
 
-	if err := app.Start(cfg.Listen); err != nil {
+	if err := app.Start(":" + cfg.HttpPort); err != nil {
 		logger.Fatal("cannot start the server", zap.Error(err))
 	}
 }
