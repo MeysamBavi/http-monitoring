@@ -1,0 +1,19 @@
+[
+  {
+    "path": "POST",
+    "value": {
+      "urls": [
+        {
+          "url": "https://httpbin.org/status/500",
+          "threshold": 5,
+          "interval": "5s"
+        },
+        {
+          "url": "https://httpbin.org/status/200",
+          "threshold": 5,
+          "interval": "5s"
+        }
+      ]
+    }
+  }
+]
