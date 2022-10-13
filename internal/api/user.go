@@ -55,8 +55,6 @@ func (h *UserHandler) create(c echo.Context) error {
 		return echo.ErrInternalServerError
 	}
 
-	h.Logger.Info("user created", zap.Any("user", user))
-
 	return c.JSON(http.StatusCreated, user)
 }
 
@@ -89,8 +87,6 @@ func (h *UserHandler) login(c echo.Context) error {
 	if user.Password != req.Password {
 		return echo.NewHTTPError(http.StatusUnauthorized, "invalid password")
 	}
-
-	h.Logger.Info("user logged in", zap.Any("user", user))
 
 	token, err := h.JwtHandler.GenerateFromUser(user)
 

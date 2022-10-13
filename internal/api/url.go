@@ -54,8 +54,6 @@ func (h *UrlHandler) create(c echo.Context) error {
 		return echo.ErrInternalServerError
 	}
 
-	h.Logger.Info("url created", zap.Any("url", url))
-
 	return c.JSON(http.StatusCreated, url)
 }
 
