@@ -42,3 +42,4 @@ jobs:
         iterationData: test/api_test_data.json
         timeout: 20000
         delayRequest: 100
+        environment: test/http-monitoring.postman_environment.json

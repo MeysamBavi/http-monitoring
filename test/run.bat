@@ -1,2 +1,2 @@
 echo off
-newman run http-monitoring.postman_collection.json -d api_test_data.json --verbose --delay-request 100 --timeout 20000
+newman run http-monitoring.postman_collection.json -d api_test_data.json -e http-monitoring.postman_environment.json --verbose --delay-request 100 --timeout 20000
