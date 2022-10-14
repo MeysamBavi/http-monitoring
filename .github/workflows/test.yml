@@ -8,7 +8,8 @@ on:
 
 jobs:
 
-  build:
+  build-and-test:
+    name: Build and Test
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -20,28 +21,24 @@ jobs:
 
     - name: Build
       run: go build -o httpm -v
-  
-  run:
-    runs-on: ubuntu-latest
-    needs: build
-    
-    steps:
-      - name: Run http server
-        run: httpm serve
-        env:
-          HTTPM_HTTP_PORT: 3000
-      
-      - name: Run monitoring module
-        run: httpm monitor
-        
-  test:
-    runs-on: ubuntu-latest
-    needs: run
-    
-    steps:
+
+    - name: Start MongoDB
+      uses: supercharge/mongodb-github-action@1.8.0
+      with:
+        mongodb-version: 6.0.1
+
+    - name: Run monitoring module
+      run: ./httpm monitor --migrate-first &
+
+    - name: Run http server
+      run: ./httpm serve &
+      env:
+        HTTPM_HTTP_PORT: 3000
+
     - name: Test Postman collection
       uses: matt-ball/newman-action@master
       with:
         collection: test/http-monitoring.postman_collection.json
         iterationData: test/api_test_data.json
-      
+        timeout: 20000
+        delayRequest: 100
