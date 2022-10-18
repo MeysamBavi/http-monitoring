@@ -280,6 +280,7 @@ func (m *MongodbUrl) UpdateStat(ctx context.Context, userId model.ID, id model.I
 				"day_stats.$.failure_count": stat.FailureCount,
 			},
 		},
+		options.FindOneAndUpdate().SetReturnDocument(options.After),
 	)
 
 	if r.Err() != nil {
