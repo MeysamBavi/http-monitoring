@@ -6,6 +6,7 @@ import (
 	"github.com/MeysamBavi/http-monitoring/internal/db"
 	"github.com/MeysamBavi/http-monitoring/internal/store"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"go.uber.org/zap"
 )
 
@@ -14,6 +15,8 @@ func Setup(cfg *config.Config, logger *zap.Logger, app *echo.Echo) {
 
 	jh := getJwtHandler(cfg)
 
+	app.Use(newLoggerMiddleware(logger))
+	app.Use(middleware.RequestID())
 	registerAPIs(logger, s, jh, app)
 
 	app.Debug = cfg.Debug
@@ -63,4 +66,25 @@ func getStore(cfg *config.Config, logger *zap.Logger) store.Store {
 		cfg.Database,
 		logger.Named("mongo"),
 	)
+}
+
+func newLoggerMiddleware(logger *zap.Logger) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			err := next(c)
+			logger.Info("response sent",
+				zap.String("id", c.Response().Header().Get(echo.HeaderXRequestID)),
+				zap.String("remote_ip", c.RealIP()),
+				zap.String("host", c.Request().Host),
+				zap.String("method", c.Request().Method),
+				zap.String("URI", c.Request().RequestURI),
+				zap.String("user_agent", c.Request().UserAgent()),
+				zap.Int("status", c.Response().Status),
+				zap.Error(err),
+				zap.Int64("bytes_in", c.Request().ContentLength),
+				zap.Int64("bytes_out", c.Response().Size),
+			)
+			return err
+		}
+	}
 }

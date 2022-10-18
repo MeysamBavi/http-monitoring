@@ -31,7 +31,9 @@ func (h *UrlHandler) create(c echo.Context) error {
 	var req request.URL
 
 	if err := c.Bind(&req); err != nil {
-		h.Logger.Error("error binding request", zap.Error(err))
+		h.Logger.Error("error binding request", zap.Error(err),
+			zap.Any("user_id", claims.UserId),
+			zap.String("request_id", c.Response().Header().Get(echo.HeaderXRequestID)))
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
@@ -50,11 +52,11 @@ func (h *UrlHandler) create(c echo.Context) error {
 	err := h.UrlStore.Add(ctx, url)
 
 	if err != nil {
-		h.Logger.Error("error adding url", zap.Error(err))
+		h.Logger.Error("error adding url", zap.Error(err),
+			zap.Any("user_id", claims.UserId),
+			zap.String("request_id", c.Response().Header().Get(echo.HeaderXRequestID)))
 		return echo.ErrInternalServerError
 	}
-
-	h.Logger.Info("url created", zap.Any("url", url))
 
 	return c.JSON(http.StatusCreated, url)
 }
@@ -68,11 +70,15 @@ func (h *UrlHandler) getAll(c echo.Context) error {
 	if err != nil {
 		var notFound store.NotFoundError
 		if errors.As(err, &notFound) {
-			h.Logger.Error("error getting user urls", zap.Error(notFound))
+			h.Logger.Error("error getting user urls", zap.Error(notFound),
+				zap.Any("user_id", claims.UserId),
+				zap.String("request_id", c.Response().Header().Get(echo.HeaderXRequestID)))
 			return echo.NewHTTPError(http.StatusNotFound, "no urls found")
 		}
 
-		h.Logger.Error("error getting user urls", zap.Error(err))
+		h.Logger.Error("error getting user urls", zap.Error(err),
+			zap.Any("user_id", claims.UserId),
+			zap.String("request_id", c.Response().Header().Get(echo.HeaderXRequestID)))
 		return echo.ErrInternalServerError
 	}
 
@@ -88,7 +94,9 @@ func (h *UrlHandler) getDayStats(c echo.Context) error {
 
 	var dayStats request.DayStats
 	if err := c.Bind(&dayStats); err != nil {
-		h.Logger.Error("error binding the request", zap.Error(err))
+		h.Logger.Error("error binding the request", zap.Error(err),
+			zap.Any("user_id", claims.UserId),
+			zap.String("request_id", c.Response().Header().Get(echo.HeaderXRequestID)))
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
@@ -102,11 +110,15 @@ func (h *UrlHandler) getDayStats(c echo.Context) error {
 	if err != nil {
 		var notFound store.NotFoundError
 		if errors.As(err, &notFound) {
-			h.Logger.Error("error getting url stats", zap.Error(notFound))
+			h.Logger.Error("error getting url stats", zap.Error(notFound),
+				zap.Any("user_id", claims.UserId),
+				zap.String("request_id", c.Response().Header().Get(echo.HeaderXRequestID)))
 			return echo.NewHTTPError(http.StatusNotFound, "no stats found for url")
 		}
 
-		h.Logger.Error("error getting day stats", zap.Error(err))
+		h.Logger.Error("error getting day stats", zap.Error(err),
+			zap.Any("user_id", claims.UserId),
+			zap.String("request_id", c.Response().Header().Get(echo.HeaderXRequestID)))
 		return echo.ErrInternalServerError
 	}
 

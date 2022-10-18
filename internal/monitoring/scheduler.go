@@ -88,18 +88,18 @@ func (s *Scheduler) waitForShutdown(scope *scope) {
 	<-scope.shutdown
 	s.logger.Info("received shutdown signal")
 
-	s.logger.Info("stopping update")
+	s.logger.Info("stopping 'update' module")
 	scope.updateShutdown <- 0
 	<-scope.updateDone
 
-	s.logger.Info("stopping schedule")
+	s.logger.Info("stopping 'schedule' module")
 	scope.scheduleShutdown <- 0 // close "in"
 
 	s.logger.Info("waiting for workers to finish")
 	scope.wg.Wait() // wait for workers to stop writing to "out"
 
 	close(scope.out) // close "out"
-	s.logger.Info("waiting for collect to finish writing to db")
+	s.logger.Info("waiting for 'collect' module to finish writing to db")
 	<-scope.collectDone // wait for collect to complete working
 }
 
@@ -147,7 +147,7 @@ func (s *Scheduler) schedule(syncedHeap *util.SyncHeap[*TimedURL], in chan<- *Ta
 				continue
 			}
 
-			logger.Debug("sending this url to workers", zap.String("url", earliestUrl.URL))
+			logger.Debug("sending this url to workers", zap.Any("url", earliestUrl))
 			in <- &Task{
 				UrlId:  earliestUrl.UrlId,
 				URL:    earliestUrl.URL,
@@ -197,7 +197,6 @@ func (s *Scheduler) collect(out <-chan *Result, done chan<- int) {
 	logger := s.logger.Named("collect")
 
 	for r := range out {
-		logger.Debug("saving this result to db", zap.Any("result", r))
 
 		var success, failure int
 		if r.StatusCode >= 200 && r.StatusCode < 300 {
@@ -208,19 +207,23 @@ func (s *Scheduler) collect(out <-chan *Result, done chan<- int) {
 			failure = 1
 		}
 
-		url, stat, err := s.dataStore.Url().UpdateStat(context.Background(), r.Task.UserId, r.Task.UrlId, model.DayStat{
+		statChange := model.DayStat{
 			Date:         model.Today(),
 			SuccessCount: success,
 			FailureCount: failure,
-		})
+		}
+
+		logger.Debug("saving this result to db", zap.Any("result", r), zap.Any("statChange", statChange))
+		url, stat, err := s.dataStore.Url().UpdateStat(context.Background(), r.Task.UserId, r.Task.UrlId, statChange)
 
 		if err != nil {
-			s.logger.Error("error updating stat", zap.Error(err), zap.Any("stat", stat))
+			logger.Error("error updating stat", zap.Error(err), zap.Any("result", r), zap.Any("stat", stat))
 			continue
 		}
 
 		// send alert if it has passed failure threshold
 		if stat.FailureCount > 0 && stat.FailureCount%url.Threshold == 0 {
+			logger.Debug("creating alert", zap.Any("url", url), zap.Any("stat", stat))
 			err := s.dataStore.Alert().Add(context.Background(), &model.Alert{
 				UserId:   url.UserId,
 				UrlId:    url.Id,
@@ -229,7 +232,7 @@ func (s *Scheduler) collect(out <-chan *Result, done chan<- int) {
 			})
 
 			if err != nil {
-				s.logger.Error("error adding alert", zap.Error(err), zap.Any("url", url))
+				logger.Error("creating adding alert", zap.Error(err), zap.Any("url", url), zap.Any("stat", stat))
 				continue
 			}
 		}

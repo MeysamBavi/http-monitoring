@@ -133,7 +133,7 @@ func (m *MongodbUrl) Add(ctx context.Context, doc *model.URL) error {
 		Operation: UrlChangeOperationInsert,
 		Timestamp: time.Now(),
 	}); err != nil {
-		m.logger.Error("could not insert url change event", zap.Error(err))
+		m.logger.Error("could not insert url change event", zap.Error(err), zap.Any("url", doc))
 	}
 
 	return nil
@@ -233,7 +233,12 @@ func (m *MongodbUrl) ListenForChanges(ctx context.Context) (<-chan UrlChangeEven
 	out := make(chan UrlChangeEvent)
 
 	go func() {
-		defer cursor.Close(ctx)
+		defer func() {
+			err := cursor.Close(ctx)
+			if err != nil {
+				m.logger.Error("could not close cursor", zap.Error(err))
+			}
+		}()
 		defer close(out)
 
 		for cursor.Next(ctx) {
@@ -244,7 +249,7 @@ func (m *MongodbUrl) ListenForChanges(ctx context.Context) (<-chan UrlChangeEven
 
 			var event UrlChangeEvent
 			if err := cursor.Decode(&event); err != nil {
-				m.logger.Error("error decoding current cursor value to url", zap.Error(err))
+				m.logger.Error("error decoding current cursor value to 'UrlChangeEvent'", zap.Error(err))
 				continue
 			}
 
@@ -252,7 +257,7 @@ func (m *MongodbUrl) ListenForChanges(ctx context.Context) (<-chan UrlChangeEven
 				continue
 			}
 
-			m.logger.Info("sending change event", zap.Any("event", event))
+			m.logger.Debug("sending change event", zap.Any("event", event))
 			out <- event
 		}
 
