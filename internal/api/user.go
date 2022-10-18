@@ -28,7 +28,8 @@ func (h *UserHandler) create(c echo.Context) error {
 	var req request.User
 
 	if err := c.Bind(&req); err != nil {
-		h.Logger.Error("error binding request", zap.Error(err))
+		h.Logger.Error("error binding request", zap.Error(err),
+			zap.String("request_id", c.Response().Header().Get(echo.HeaderXRequestID)))
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
@@ -47,11 +48,13 @@ func (h *UserHandler) create(c echo.Context) error {
 	if err != nil {
 		var duplicate store.DuplicateError
 		if errors.As(err, &duplicate) {
-			h.Logger.Error("duplicate username", zap.Error(duplicate))
+			h.Logger.Error("duplicate username", zap.Error(duplicate),
+				zap.String("request_id", c.Response().Header().Get(echo.HeaderXRequestID)))
 			return echo.NewHTTPError(http.StatusBadRequest, "this username is already taken")
 		}
 
-		h.Logger.Error("error adding user", zap.Error(err))
+		h.Logger.Error("error adding user", zap.Error(err),
+			zap.String("request_id", c.Response().Header().Get(echo.HeaderXRequestID)))
 		return echo.ErrInternalServerError
 	}
 
@@ -62,7 +65,8 @@ func (h *UserHandler) login(c echo.Context) error {
 	var req request.User
 
 	if err := c.Bind(&req); err != nil {
-		h.Logger.Error("error binding request", zap.Error(err))
+		h.Logger.Error("error binding request", zap.Error(err),
+			zap.String("request_id", c.Response().Header().Get(echo.HeaderXRequestID)))
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
@@ -76,11 +80,13 @@ func (h *UserHandler) login(c echo.Context) error {
 	if err != nil {
 		var notFound store.NotFoundError
 		if errors.As(err, &notFound) {
-			h.Logger.Error("user not found", zap.Error(notFound))
+			h.Logger.Error("user not found", zap.Error(notFound),
+				zap.String("request_id", c.Response().Header().Get(echo.HeaderXRequestID)))
 			return echo.NewHTTPError(http.StatusNotFound, "user not found")
 		}
 
-		h.Logger.Error("error getting user", zap.Error(err))
+		h.Logger.Error("error getting user", zap.Error(err),
+			zap.String("request_id", c.Response().Header().Get(echo.HeaderXRequestID)))
 		return echo.ErrInternalServerError
 	}
 
@@ -91,7 +97,8 @@ func (h *UserHandler) login(c echo.Context) error {
 	token, err := h.JwtHandler.GenerateFromUser(user)
 
 	if err != nil {
-		h.Logger.Error("error generating token", zap.Error(err))
+		h.Logger.Error("error generating token", zap.Error(err),
+			zap.String("request_id", c.Response().Header().Get(echo.HeaderXRequestID)))
 		return echo.ErrInternalServerError
 	}
 

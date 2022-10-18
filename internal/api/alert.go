@@ -29,7 +29,10 @@ func (h *AlertHandler) get(c echo.Context) error {
 
 	var alert request.Alert
 	if err := c.Bind(&alert); err != nil {
-		h.Logger.Error("error binding request", zap.Error(err))
+		h.Logger.Error("error binding request",
+			zap.Error(err),
+			zap.Any("user_id", claims.UserId),
+			zap.String("request_id", c.Response().Header().Get(echo.HeaderXRequestID)))
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
@@ -43,7 +46,10 @@ func (h *AlertHandler) get(c echo.Context) error {
 	if err != nil {
 		var notFound store.NotFoundError
 		if errors.As(err, &notFound) {
-			h.Logger.Error("url not found", zap.Error(notFound))
+			h.Logger.Error("url not found",
+				zap.Error(notFound),
+				zap.Any("user_id", claims.UserId),
+				zap.String("request_id", c.Response().Header().Get(echo.HeaderXRequestID)))
 			return echo.NewHTTPError(http.StatusNotFound, "url not found")
 		}
 
