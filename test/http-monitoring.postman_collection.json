@@ -254,7 +254,7 @@
 									"var urlList = pm.response.json()\r",
 									"\r",
 									"pm.test(\"Url is list not empty\", function () {\r",
-									"    pm.expect(urlList.length).to.be.greaterThan(0);\r",
+									"    pm.expect(urlList.length).to.be.eql(pm.iterationData.get(\"value\").urls.length);\r",
 									"});\r",
 									"\r",
 									"// test all urls\r",
@@ -426,11 +426,29 @@
 							"script": {
 								"exec": [
 									"var urlsToBeChecked = pm.variables.get(\"urlsToBeChecked\");\r",
-									"\r",
-									"var thisUrlId = urlsToBeChecked.pop()[\"id\"];\r",
-									"pm.variables.set(\"thisUrlId\", thisUrlId);\r",
-									"\r",
+									"var thisUrl = urlsToBeChecked.pop();\r",
 									"pm.variables.set(\"urlsToBeChecked\", urlsToBeChecked);\r",
+									"\r",
+									"pm.variables.set(\"thisUrlId\", thisUrl.id);\r",
+									"\r",
+									"// util functions\r",
+									"\r",
+									"async function sleep(ms) {\r",
+									"    console.log(`sleeping for ${ms/1000} seconds`)\r",
+									"    await new Promise(r => setTimeout(r, ms));\r",
+									"}\r",
+									"\r",
+									"function parseTime(str) {\r",
+									"    const empty = {1:0}\r",
+									"    var hours = str.match(/(\\d+)h/) || empty\r",
+									"    var minutes = str.match(/(\\d+)m/) || empty\r",
+									"    var seconds = str.match(/(\\d+)s/) || empty\r",
+									"\r",
+									"    var totalSeconds = (hours[1]*60*60) + (minutes[1]*60) + (seconds[1]*1)\r",
+									"    return totalSeconds * 1000\r",
+									"}\r",
+									"\r",
+									"sleep(1000 + parseTime(thisUrl.interval))\r",
 									""
 								],
 								"type": "text/javascript"
@@ -445,6 +463,10 @@
 									"});\r",
 									"\r",
 									"stats = pm.response.json();\r",
+									"\r",
+									"pm.test(\"Stat list is not empty\", function () {\r",
+									"    pm.expect(stats.length).to.be.greaterThan(0);\r",
+									"});\r",
 									"\r",
 									"stats.forEach(function (s) {\r",
 									"        pm.test(\"Stats have the specified schema\", function () {\r",
@@ -463,10 +485,18 @@
 									"    });\r",
 									"});\r",
 									"\r",
+									"pm.test(\"Last stat has at least one fail or success\", function () {\r",
+									"    var last = stats[stats.length-1]\r",
+									"    const hasOne = last.failure_count > 0 || last.success_count > 0\r",
+									"    pm.expect(hasOne).to.eql(true);\r",
+									"});\r",
+									"\r",
 									"var urlsToBeChecked = pm.variables.get(\"urlsToBeChecked\");\r",
 									"\r",
 									"if (urlsToBeChecked.length > 0) {\r",
 									"    postman.setNextRequest(\"get stats\");\r",
+									"} else {\r",
+									"    postman.setNextRequest(\"create fail url\")\r",
 									"}"
 								],
 								"type": "text/javascript"
@@ -496,18 +526,131 @@
 			"name": "Check for new Alert",
 			"item": [
 				{
+					"name": "create fail url",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Created an always fail url\", function () {\r",
+									"    pm.expect(pm.response.code).to.be.oneOf([201, 202]);\r",
+									"});\r",
+									"\r",
+									"var createdFailUrl = pm.response.json();\r",
+									"\r",
+									"pm.test(\"Fail url has id\", function () {\r",
+									"    pm.expect(createdFailUrl).to.haveOwnProperty(\"id\")\r",
+									"});\r",
+									"\r",
+									"pm.variables.set(\"failUrlId\", createdFailUrl.id);\r",
+									""
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"var failUrl = pm.iterationData.get(\"value\").failUrl\r",
+									"pm.variables.set(\"failUrl\", failUrl.url);\r",
+									"pm.variables.set(\"failUrlThreshold\", failUrl.threshold);\r",
+									"pm.variables.set(\"failUrlInterval\", failUrl.interval);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"url\": \"{{failUrl}}\",\r\n    \"threshold\": {{failUrlThreshold}},\r\n    \"interval\": \"{{failUrlInterval}}\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{url}}/urls",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"urls"
+							]
+						}
+					},
+					"response": []
+				},
+				{
 					"name": "get alert",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// util functions\r",
+									"\r",
+									"async function sleep(ms) {\r",
+									"    console.log(`sleeping for ${ms/1000} seconds`)\r",
+									"    await new Promise(r => setTimeout(r, ms));\r",
+									"}\r",
+									"\r",
+									"function parseTime(str) {\r",
+									"    const empty = {1:0}\r",
+									"    var hours = str.match(/(\\d+)h/) || empty\r",
+									"    var minutes = str.match(/(\\d+)m/) || empty\r",
+									"    var seconds = str.match(/(\\d+)s/) || empty\r",
+									"\r",
+									"    var totalSeconds = (hours[1]*60*60) + (minutes[1]*60) + (seconds[1]*1)\r",
+									"    return totalSeconds * 1000\r",
+									"}\r",
+									"\r",
+									"sleep(pm.variables.get(\"failUrlThreshold\") * parseTime(pm.variables.get(\"failUrlInterval\")) + 1000)"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									"\r",
+									"var alerts = pm.response.json()\r",
+									"\r",
+									"pm.test(\"Alert is created\", function () {\r",
+									"    pm.expect(alerts.length).to.be.greaterThan(0);\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Alert is valid\", function (){\r",
+									"    var alert = alerts[alerts.length-1]\r",
+									"    pm.expect(alert).to.haveOwnProperty(\"url_id\");\r",
+									"    pm.expect(alert).to.haveOwnProperty(\"issued_at\");\r",
+									"    pm.expect(alert.url_id).to.eql(pm.variables.get(\"failUrlId\"))\r",
+									"    pm.expect(Date.parse(alert.issued_at)).to.be.lte(Date.now())\r",
+									"})"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{url}}/alerts/6326b539218bf2c0697bb5e9",
+							"raw": "{{url}}/alerts/{{failUrlId}}",
 							"host": [
 								"{{url}}"
 							],
 							"path": [
 								"alerts",
-								"6326b539218bf2c0697bb5e9"
+								"{{failUrlId}}"
 							]
 						}
 					},

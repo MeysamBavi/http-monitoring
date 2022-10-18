@@ -12,7 +12,12 @@
           "threshold": 5,
           "interval": "5s"
         }
-      ]
+      ],
+      "failUrl": {
+        "url": "https://httpbin.org/status/404",
+        "threshold": 5,
+        "interval": "5s"
+      }
     }
   }
 ]
