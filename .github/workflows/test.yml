@@ -41,5 +41,5 @@ jobs:
         collection: test/http-monitoring.postman_collection.json
         iterationData: test/api_test_data.json
         timeout: 60000
-        delayRequest: 100
+        delayRequest: 500
         environment: test/http-monitoring.postman_environment.json
